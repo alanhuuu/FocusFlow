@@ -1,5 +1,5 @@
 import requests
-from tokens import generate_developer_token
+from .token_generator import generate_developer_token
 
 BASE_URL = "https://api.music.apple.com/v1"
 
