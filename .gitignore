@@ -1,1 +1,21 @@
+# macOS
+.DS_Store
+
+# env files
 .env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Apple Music private keys
+*.p8
+keys/

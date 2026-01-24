@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Header
-from ..services.apple_music_playlist_core_functions import create_playlist, add_tracks
+from services.apple_music_playlist_core_functions import create_playlist, add_tracks
 
 router = APIRouter()
 
