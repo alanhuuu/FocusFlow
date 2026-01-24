@@ -1,6 +1,7 @@
 import jwt
 import time
 import os
+<<<<<<< HEAD
 from pathlib import Path
 
 # APPLE_TEAM_ID = os.getenv("APPLE_TEAM_ID")
@@ -14,6 +15,12 @@ APPLE_KEY_ID = "88B2L2KSK6"
 PRIVATE_KEY_PATH = "./keys/AuthKey_88B2L2KSK6.p8"
 
 
+=======
+
+APPLE_TEAM_ID = os.getenv("APPLE_TEAM_ID")
+APPLE_KEY_ID = os.getenv("APPLE_KEY_ID")
+PRIVATE_KEY_PATH = os.getenv("APPLE_PRIVATE_KEY_PATH")
+>>>>>>> origin/main
 
 def generate_developer_token():
     with open(PRIVATE_KEY_PATH, "r") as f:
