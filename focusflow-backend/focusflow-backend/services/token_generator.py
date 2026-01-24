@@ -6,6 +6,7 @@ APPLE_TEAM_ID = os.getenv("APPLE_TEAM_ID")
 APPLE_KEY_ID = os.getenv("APPLE_KEY_ID")
 PRIVATE_KEY_PATH = os.getenv("APPLE_PRIVATE_KEY_PATH")
 
+
 def generate_developer_token():
     with open(PRIVATE_KEY_PATH, "r") as f:
         private_key = f.read()
