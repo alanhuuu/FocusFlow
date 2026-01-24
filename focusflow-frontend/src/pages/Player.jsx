@@ -363,16 +363,19 @@ export default function Player() {
       </div>
 
       {/* Bottom Left Music Button (THIS is the playlist select trigger) */}
-      <div className="absolute bottom-14 left-10 z-20">
+      {/* Bottom Left Music Button (Deky UI: should NOT open playlist picker) */}
+    <div className="absolute bottom-14 left-10 z-20">
         <button
-          onClick={() => setIsPlaylistPickerOpen((v) => !v)}
-          className="w-14 h-14 rounded-2xl flex items-center justify-center hover:opacity-90 transition"
-          style={{ backgroundColor: "#2f2546" }}
-          title="Select Playlist"
-        >
-          <MusicIcon />
-        </button>
-      </div>
+            onClick={() => setIsPlaylistPickerOpen(true)}
+            className="w-14 h-14 rounded-2xl flex items-center justify-center hover:opacity-90 transition"
+            style={{ backgroundColor: "#2f2546" }}
+            title="Select Playlist"
+            >
+            <MusicIcon />
+            </button>
+
+        </div>
+
 
       {/* Bottom Center Player (Deky UI) */}
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
@@ -430,11 +433,11 @@ export default function Player() {
           </div>
         </div>
 
-        {/* ✅ Playlist Picker (hidden unless opened by music note button) */}
+                {/* ✅ Playlist Picker (hidden unless opened by music note button) */}
         {isPlaylistPickerOpen && (
           <div
-            className="mt-3 rounded-2xl border border-white/10 backdrop-blur-xl px-4 py-3"
-            style={{ backgroundColor: "rgba(47, 37, 70, 0.90)" }}
+            className="absolute left-0 bottom-20 w-[380px] rounded-2xl border border-white/10 backdrop-blur-xl px-4 py-3 shadow-2xl z-50"
+            style={{ backgroundColor: "rgba(47, 37, 70, 0.95)" }}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="text-white/70 text-sm font-medium">Select Playlist</div>
@@ -475,7 +478,10 @@ export default function Player() {
         <div className="flex gap-2 items-start">
           {/* Theme toggle group */}
           <div className="flex flex-col items-center">
-            <div className="flex rounded-full p-1 gap-0.5 border-2 border-white/30" style={{ backgroundColor: "#2f2546" }}>
+            <div
+              className="flex rounded-full p-1 gap-0.5 border-2 border-white/30"
+              style={{ backgroundColor: "#2f2546" }}
+            >
               <button
                 onClick={() => handleSceneChange("ambient")}
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:opacity-90 transition"
@@ -499,16 +505,26 @@ export default function Player() {
               </button>
             </div>
 
-            <div className={`text-white text-base font-light mt-2 transition-opacity duration-300 ${showThemeLabel ? "opacity-100" : "opacity-0"}`}>
+            <div
+              className={`text-white text-base font-light mt-2 transition-opacity duration-300 ${
+                showThemeLabel ? "opacity-100" : "opacity-0"
+              }`}
+            >
               {themeLabels[activeScene]}
             </div>
           </div>
 
           {/* Buttons */}
-          <button className="w-10 h-10 rounded-lg flex items-center justify-center hover:opacity-80 transition" style={{ backgroundColor: "#2f2546" }}>
+          <button
+            className="w-10 h-10 rounded-lg flex items-center justify-center hover:opacity-80 transition"
+            style={{ backgroundColor: "#2f2546" }}
+          >
             <GiftIcon />
           </button>
-          <button className="w-10 h-10 rounded-lg flex items-center justify-center hover:opacity-80 transition" style={{ backgroundColor: "#2f2546" }}>
+          <button
+            className="w-10 h-10 rounded-lg flex items-center justify-center hover:opacity-80 transition"
+            style={{ backgroundColor: "#2f2546" }}
+          >
             <SettingsIcon />
           </button>
           <button
