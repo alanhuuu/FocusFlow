@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from services.token_generator import generate_developer_token
+from ..services.token_generator import generate_developer_token
 
 
 router = APIRouter()

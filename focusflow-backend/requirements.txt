@@ -3,3 +3,6 @@ uvicorn[standard]
 python-dotenv
 pyjwt[crypto]
 requests
+pylsl
+numpy
+websockets

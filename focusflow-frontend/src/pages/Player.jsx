@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, ReferenceLine, ResponsiveContainer } from "recharts";
+import { useEEG } from "../hooks/useEEG";
 import bgFocus from "../assets/bg.png";
 import bgHome from "../assets/bg-home.jpg";
 import bgChill from "../assets/bg-chill.jpg";
@@ -8,14 +9,14 @@ import useMusicKit from "../hooks/useMusicKit";
 
 // Icons
 const MusicIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
     <path d="M14.3187 2.50498C13.0514 2.35716 11.8489 3.10033 11.4144 4.29989C11.3165 4.57023 11.2821 4.86251 11.266 5.16888C11.2539 5.40001 11.2509 5.67552 11.2503 6L11.25 6.45499C11.25 6.4598 11.25 6.4646 11.25 6.46938V14.5359C10.4003 13.7384 9.25721 13.25 8 13.25C5.37665 13.25 3.25 15.3766 3.25 18C3.25 20.6234 5.37665 22.75 8 22.75C10.6234 22.75 12.75 20.6234 12.75 18V9.21059C12.8548 9.26646 12.9683 9.32316 13.0927 9.38527L15.8002 10.739C16.2185 10.9481 16.5589 11.1183 16.8378 11.2399C17.119 11.3625 17.3958 11.4625 17.6814 11.4958C18.9486 11.6436 20.1511 10.9004 20.5856 9.70089C20.6836 9.43055 20.7179 9.13826 20.7341 8.83189C20.75 8.52806 20.75 8.14752 20.75 7.67988L20.7501 7.59705C20.7502 7.2493 20.7503 6.97726 20.701 6.71946C20.574 6.05585 20.2071 5.46223 19.6704 5.05185C19.4618 4.89242 19.2185 4.77088 18.9074 4.6155L16.1999 3.26179C15.7816 3.05264 15.4412 2.88244 15.1623 2.76086C14.8811 2.63826 14.6043 2.53829 14.3187 2.50498Z" />
   </svg>
 );
 
 const LotusIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <path d="M22.063,8.226a7.976,7.976,0,0,0-5.521.63,10.063,10.063,0,0,0-3.986-5.687,1,1,0,0,0-1.112,0A10.072,10.072,0,0,0,7.457,8.858a7.964,7.964,0,0,0-5.521-.632,1,1,0,0,0-.732.769,10.771,10.771,0,0,0,2.481,9.149C6.036,20.781,8.873,21,11.816,21h.356c2.947,0,5.786-.219,8.14-2.855A10.764,10.764,0,0,0,22.8,8.994,1,1,0,0,0,22.063,8.226ZM12,5.245a8.36,8.36,0,0,1,2.772,4.73,9.256,9.256,0,0,0-1.089,1.017A10.3,10.3,0,0,0,12,13.515a10.345,10.345,0,0,0-1.687-2.523A9.314,9.314,0,0,0,9.227,9.98,8.362,8.362,0,0,1,12,5.245ZM10.958,18.992c-2.272-.05-4.173-.376-5.78-2.179A8.762,8.762,0,0,1,3.06,10.04a6.63,6.63,0,0,1,5.762,2.341A8.768,8.768,0,0,1,10.958,18.992Zm7.861-2.179c-1.61,1.8-3.513,2.129-5.789,2.179a8.759,8.759,0,0,1,2.138-6.61,6.808,6.808,0,0,1,5.011-2.393,5.528,5.528,0,0,1,.761.052A8.755,8.755,0,0,1,18.819,16.813Z"/>
+    <path d="M22.063,8.226a7.976,7.976,0,0,0-5.521.63,10.063,10.063,0,0,0-3.986-5.687,1,1,0,0,0-1.112,0A10.072,10.072,0,0,0,7.457,8.858a7.964,7.964,0,0,0-5.521-.632,1,1,0,0,0-.732.769,10.771,10.771,0,0,0,2.481,9.149C6.036,20.781,8.873,21,11.816,21h.356c2.947,0,5.786-.219,8.14-2.855A10.764,10.764,0,0,0,22.8,8.994,1,1,0,0,0,22.063,8.226ZM12,5.245a8.36,8.36,0,0,1,2.772,4.73,9.256,9.256,0,0,0-1.089,1.017A10.3,10.3,0,0,0,12,13.515a10.345,10.345,0,0,0-1.687-2.523A9.314,9.314,0,0,0,9.227,9.98,8.362,8.362,0,0,1,12,5.245ZM10.958,18.992c-2.272-.05-4.173-.376-5.78-2.179A8.762,8.762,0,0,1,3.06,10.04a6.63,6.63,0,0,1,5.762,2.341A8.768,8.768,0,0,1,10.958,18.992Zm7.861-2.179c-1.61,1.8-3.513,2.129-5.789,2.179a8.759,8.759,0,0,1,2.138-6.61,6.808,6.808,0,0,1,5.011-2.393,5.528,5.528,0,0,1,.761.052A8.755,8.755,0,0,1,18.819,16.813Z" />
   </svg>
 );
 
@@ -104,6 +105,42 @@ export default function Player() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showThemeLabel, setShowThemeLabel] = useState(false);
 
+  // EEG Hook for real Muse data
+  const {
+    isConnected,
+    isStreaming,
+    connectionStatus,
+    eegData,
+    currentData,
+    error: eegError,
+    connect,
+    disconnect,
+    startStream,
+  } = useEEG();
+
+  const focusState = currentData?.focusState || "—";
+
+  // Handle connect button
+  const handleConnect = async () => {
+    if (isConnected) {
+      disconnect();
+    } else {
+      const result = await connect();
+      if (result.success) {
+        startStream();
+      }
+    }
+  };
+
+  const focusColor = useMemo(() => {
+    if (focusState === "FOCUSED") return "#22c55e";
+    if (focusState === "NEUTRAL") return "#eab308";
+    if (focusState === "DISTRACTED") return "#ef4444";
+    return "#7532ff";
+  }, [focusState]);
+
+  const currentTbr = currentData?.tbr?.toFixed(2) || "—";
+
   const backgrounds = {
     ambient: bgFocus,
     home: bgHome,
@@ -139,26 +176,46 @@ export default function Player() {
   }
 
   // -------------------------
-  // ✅ NO EEG DATA (match Deky UI)
-  // -------------------------
-  const focusState = "—";
-  const currentTbr = "—";
-  const focusColor = "#a855f7";
-
-  // -------------------------
-  // ✅ MusicKit Logic (OUR CODE)
+  // MusicKit Logic
   // -------------------------
   const { music, ready, authorize, connected, fetchPlaylists, playPlaylist } = useMusicKit();
 
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [trackTitle, setTrackTitle] = useState("Not Playing");
   const [trackSubtitle, setTrackSubtitle] = useState("Select a playlist");
   const [trackArtwork, setTrackArtwork] = useState(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const [playlists, setPlaylists] = useState([]);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState("");
 
   const [isPlaylistPickerOpen, setIsPlaylistPickerOpen] = useState(false);
+  const [isPlaylistPickerClosing, setIsPlaylistPickerClosing] = useState(false);
+
+  // Loading timeout - prevent infinite spinner
+  useEffect(() => {
+    if (!isLoading) return;
+
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+      console.log("Loading timeout - resetting state");
+    }, 15000); // 15 second max loading time
+
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
+  const closePlaylistPicker = useCallback(() => {
+    setIsPlaylistPickerClosing((prev) => {
+      if (prev) return prev; // already closing
+      setTimeout(() => {
+        setIsPlaylistPickerOpen(false);
+        setIsPlaylistPickerClosing(false);
+      }, 350);
+      return true;
+    });
+  }, []);
 
   // Load playlists after connected
   useEffect(() => {
@@ -170,39 +227,57 @@ export default function Player() {
     loadPlaylists();
   }, [connected, fetchPlaylists]);
 
-  // Now playing listener
+  // MusicKit player state (v3 API)
   useEffect(() => {
     if (!music) return;
 
-    const updateNowPlaying = () => {
-      const nowPlaying = music.player.nowPlayingItem;
+    const onStateChange = () => {
+      const state = music.playbackState;
+      const MKStates = window.MusicKit?.PlaybackStates || {};
 
-      if (!nowPlaying) {
+      setIsPlaying(state === MKStates.playing);
+      setIsLoading(state === MKStates.loading || state === MKStates.waiting || state === MKStates.stalled);
+    };
+
+    const onTrackChange = () => {
+      const item = music.nowPlayingItem;
+      if (!item) {
         setTrackTitle("Not Playing");
         setTrackSubtitle("Select a playlist");
         setTrackArtwork(null);
-      } else {
-        setTrackTitle(nowPlaying.title || "Unknown Track");
-        setTrackSubtitle(nowPlaying.artistName || "Unknown Artist");
-
-        if (nowPlaying.artworkURL) {
-          const url = nowPlaying.artworkURL.replace("{w}", "200").replace("{h}", "200");
-          setTrackArtwork(url);
-        } else {
-          setTrackArtwork(null);
-        }
+        setDuration(0);
+        return;
       }
 
-      setIsPlaying(!!music.player.isPlaying);
+      setTrackTitle(item.title || item.attributes?.name || "Unknown");
+      setTrackSubtitle(item.artistName || item.attributes?.artistName || "Unknown");
+      setDuration(music.currentPlaybackDuration || 0);
+
+      const artUrl = item.artworkURL || item.attributes?.artwork?.url;
+      const art = artUrl?.replace("{w}", "200").replace("{h}", "200");
+      setTrackArtwork(art || null);
     };
 
-    updateNowPlaying();
-    music.player.addEventListener("playbackStateDidChange", updateNowPlaying);
-    music.player.addEventListener("nowPlayingItemDidChange", updateNowPlaying);
+    const onError = (error) => {
+      console.error("MusicKit Global Error:", error);
+      // Optionally set some UI state here
+      setIsLoading(false);
+    }
+
+    const onTimeChange = () => {
+      setCurrentTime(music.currentPlaybackTime || 0);
+    };
+
+    music.addEventListener("playbackStateDidChange", onStateChange);
+    music.addEventListener("nowPlayingItemDidChange", onTrackChange);
+    music.addEventListener("playbackTimeDidChange", onTimeChange);
+    music.addEventListener("playbackError", onError);
 
     return () => {
-      music.player.removeEventListener("playbackStateDidChange", updateNowPlaying);
-      music.player.removeEventListener("nowPlayingItemDidChange", updateNowPlaying);
+      music.removeEventListener("playbackStateDidChange", onStateChange);
+      music.removeEventListener("nowPlayingItemDidChange", onTrackChange);
+      music.removeEventListener("playbackTimeDidChange", onTimeChange);
+      music.removeEventListener("playbackError", onError);
     };
   }, [music]);
 
@@ -210,20 +285,14 @@ export default function Player() {
     if (!music) return;
 
     try {
-      if (music.player.isPlaying) {
-        await music.player.pause();
-        setIsPlaying(false);
-        return;
-      }
-
-      // If nothing queued yet, force playlist selection
-      if (!music.player.nowPlayingItem) {
+      const MKStates = window.MusicKit?.PlaybackStates || {};
+      if (music.playbackState === MKStates.playing) {
+        await music.pause();
+      } else if (music.nowPlayingItem) {
+        await music.play();
+      } else {
         setIsPlaylistPickerOpen(true);
-        return;
       }
-
-      await music.player.play();
-      setIsPlaying(true);
     } catch (err) {
       console.error("Play/Pause error:", err);
     }
@@ -232,7 +301,7 @@ export default function Player() {
   async function handleNext() {
     if (!music) return;
     try {
-      await music.player.skipToNextItem();
+      await music.skipToNextItem();
     } catch (err) {
       console.error("Next error:", err);
     }
@@ -241,7 +310,7 @@ export default function Player() {
   async function handlePrevious() {
     if (!music) return;
     try {
-      await music.player.skipToPreviousItem();
+      await music.skipToPreviousItem();
     } catch (err) {
       console.error("Previous error:", err);
     }
@@ -263,9 +332,8 @@ export default function Player() {
 
       {/* Transition overlay */}
       <div
-        className={`absolute inset-0 bg-black transition-opacity duration-200 ease-in-out ${
-          isTransitioning ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+        className={`absolute inset-0 bg-black transition-opacity duration-200 ease-in-out ${isTransitioning ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
       />
 
       {/* Top Left Brand */}
@@ -309,10 +377,16 @@ export default function Player() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <div className="text-white/50 text-xs uppercase tracking-widest">Live Focus</div>
-              <div className="text-2xl font-medium mt-0.5" style={{ color: focusColor }}>
-                {focusState}
+              <div className="flex items-center gap-2">
+                <div className="text-white/50 text-xs uppercase tracking-widest">Live Focus</div>
+                {isStreaming && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <span className="text-green-500 text-xs">LIVE</span>
+                  </div>
+                )}
               </div>
+              <div className="text-2xl font-medium mt-0.5" style={{ color: focusColor }}>{focusState}</div>
             </div>
 
             {/* TBR Display */}
@@ -327,12 +401,47 @@ export default function Player() {
             </div>
           </div>
 
-          {/* No EEG Data */}
-          <div className="w-[520px] h-[160px] rounded-2xl flex items-center justify-center text-white/60 bg-white/5 border border-white/10">
-            <div className="text-center">
-              <div className="text-lg font-medium text-white/80">No EEG Data</div>
-              <div className="text-sm text-white/40 mt-1">Connect your headset to start</div>
-            </div>
+          {/* EEG Data / Chart Area */}
+          <div className="w-[520px] h-[160px] rounded-2xl relative bg-white/5 border border-white/10 overflow-hidden">
+            {!isStreaming ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-white/40 text-center">
+                  <div className="text-lg">No EEG Data</div>
+                  <div className="text-sm mt-1">Connect your headset to start</div>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={eegData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="tbrGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#7532ff" stopOpacity={0.6} />
+                      <stop offset="100%" stopColor="#7532ff" stopOpacity={0.05} />
+                    </linearGradient>
+                    <filter id="glow">
+                      <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                      <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <XAxis dataKey="time" hide />
+                  <YAxis domain={[0, 5]} hide />
+                  <ReferenceLine y={2.0} stroke="#22c55e" strokeDasharray="4 4" strokeOpacity={0.5} />
+                  <ReferenceLine y={3.5} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.5} />
+                  <Area
+                    type="monotone"
+                    dataKey="tbr"
+                    stroke="#7532ff"
+                    strokeWidth={3}
+                    fill="url(#tbrGradient)"
+                    isAnimationActive={false}
+                    filter="url(#glow)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           {/* Footer */}
@@ -351,30 +460,37 @@ export default function Player() {
                 <span className="text-white/60 text-sm">Distracted</span>
               </div>
             </div>
-
             <button
-              className="px-5 py-2 rounded-full bg-white/10 border border-white/10 hover:bg-white/15 transition text-sm"
-              title="Connect Headset"
+              onClick={handleConnect}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${isConnected
+                  ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                  : "bg-white/10 text-white hover:bg-white/20"
+                }`}
+              disabled={connectionStatus === "connecting"}
             >
-              Connect Headset
+              {connectionStatus === "connecting" && "Connecting..."}
+              {connectionStatus === "disconnected" && "Connect Headset"}
+              {connectionStatus === "connected" && "Disconnect"}
+              {connectionStatus === "streaming" && "Disconnect"}
             </button>
           </div>
+          {eegError && (
+            <div className="mt-3 text-red-400 text-xs text-center">{eegError}</div>
+          )}
         </div>
       </div>
 
-      {/* Bottom Left Music Button (THIS is the playlist select trigger) */}
-      {/* Bottom Left Music Button (Deky UI: should NOT open playlist picker) */}
-    <div className="absolute bottom-14 left-10 z-20">
+      {/* Bottom Left Music Button */}
+      <div className="absolute bottom-14 left-10 z-20">
         <button
-            onClick={() => setIsPlaylistPickerOpen(true)}
-            className="w-14 h-14 rounded-2xl flex items-center justify-center hover:opacity-90 transition"
-            style={{ backgroundColor: "#2f2546" }}
-            title="Select Playlist"
-            >
-            <MusicIcon />
-            </button>
-
-        </div>
+          onClick={() => setIsPlaylistPickerOpen(true)}
+          className="w-10 h-10 rounded-lg flex items-center justify-center hover:opacity-80 transition"
+          style={{ backgroundColor: "#2f2546" }}
+          title="Select Playlist"
+        >
+          <MusicIcon />
+        </button>
+      </div>
 
 
       {/* Bottom Center Player (Deky UI) */}
@@ -395,13 +511,23 @@ export default function Player() {
             <div className="text-white/60 text-xs truncate max-w-[160px]">{trackSubtitle}</div>
           </div>
 
-          {/* Progress (placeholder visual only to match Deky) */}
+          {/* Progress */}
           <div className="flex items-center gap-3">
-            <span className="text-white/50 text-xs w-8 text-right">--:--</span>
+            <span className="text-white/50 text-xs w-10 text-right">
+              {duration > 0 ? formatTime(currentTime) : "--:--"}
+            </span>
             <div className="w-48 h-1 bg-white/20 rounded-full overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: `35%`, backgroundColor: "#7532ff" }} />
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{
+                  width: duration > 0 ? `${(currentTime / duration) * 100}%` : "0%",
+                  backgroundColor: "#7532ff",
+                }}
+              />
             </div>
-            <span className="text-white/50 text-xs w-8">--:--</span>
+            <span className="text-white/50 text-xs w-10">
+              {duration > 0 ? formatTime(duration) : "--:--"}
+            </span>
           </div>
 
           {/* Controls */}
@@ -420,7 +546,13 @@ export default function Player() {
               style={{ backgroundColor: "#7532ff" }}
               title="Play / Pause"
             >
-              {isPlaying ? <PauseIcon /> : <PlayIcon />}
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : isPlaying ? (
+                <PauseIcon />
+              ) : (
+                <PlayIcon />
+              )}
             </button>
 
             <button
@@ -433,45 +565,84 @@ export default function Player() {
           </div>
         </div>
 
-                {/* ✅ Playlist Picker (hidden unless opened by music note button) */}
-        {isPlaylistPickerOpen && (
+      </div>
+
+      {/* Playlist Picker Modal */}
+      {isPlaylistPickerOpen && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center ${isPlaylistPickerClosing ? "modal-fade-out" : "modal-fade-in"
+            }`}
+          onClick={closePlaylistPicker}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+          {/* Modal */}
           <div
-            className="absolute left-0 bottom-20 w-[380px] rounded-2xl border border-white/10 backdrop-blur-xl px-4 py-3 shadow-2xl z-50"
+            className={`relative w-[700px] max-h-[80vh] rounded-3xl border border-white/10 shadow-2xl overflow-hidden ${isPlaylistPickerClosing ? "modal-pop-out" : "modal-pop-in"
+              }`}
             style={{ backgroundColor: "rgba(47, 37, 70, 0.95)" }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-white/70 text-sm font-medium">Select Playlist</div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-8 py-5 border-b border-white/10">
+              <div className="text-white text-xl font-medium">Your Playlists</div>
               <button
-                onClick={() => setIsPlaylistPickerOpen(false)}
-                className="text-white/50 hover:text-white transition text-sm"
+                onClick={closePlaylistPicker}
+                className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition"
               >
                 ✕
               </button>
             </div>
 
-            <select
-              value={selectedPlaylistId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSelectedPlaylistId(id);
+            {/* Grid */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
+              {playlists.length === 0 ? (
+                <div className="text-white/50 text-center py-12">No playlists found</div>
+              ) : (
+                <div className="grid grid-cols-4 gap-5">
+                  {playlists.map((p) => {
+                    const artworkUrl = p.attributes?.artwork?.url
+                      ?.replace("{w}", "300")
+                      .replace("{h}", "300");
 
-                if (id) {
-                  playPlaylist(id); // ✅ AUTOPLAY ON SELECT
-                  setIsPlaylistPickerOpen(false); // close after selecting
-                }
-              }}
-              className="w-full h-10 px-4 rounded-full bg-white/10 border border-white/10 text-white outline-none"
-            >
-              <option value="">Choose a playlist...</option>
-              {playlists.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.attributes?.name || "Unnamed Playlist"}
-                </option>
-              ))}
-            </select>
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          setSelectedPlaylistId(p.id);
+                          playPlaylist(p.id);
+                          closePlaylistPicker();
+                        }}
+                        className="group text-left"
+                      >
+                        {/* Artwork */}
+                        <div className="aspect-square rounded-xl overflow-hidden bg-white/10 mb-3 group-hover:ring-2 ring-[#7532ff] transition">
+                          {artworkUrl ? (
+                            <img
+                              src={artworkUrl}
+                              alt={p.attributes?.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-white/30">
+                              <MusicIcon />
+                            </div>
+                          )}
+                        </div>
+                        {/* Name */}
+                        <div className="text-white text-sm font-medium truncate group-hover:text-[#7532ff] transition">
+                          {p.attributes?.name || "Unnamed Playlist"}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Bottom Right Buttons (Deky exact layout) */}
       <div className="absolute bottom-6 right-10 z-20">
@@ -506,9 +677,8 @@ export default function Player() {
             </div>
 
             <div
-              className={`text-white text-base font-light mt-2 transition-opacity duration-300 ${
-                showThemeLabel ? "opacity-100" : "opacity-0"
-              }`}
+              className={`text-white text-base font-light mt-2 transition-opacity duration-300 ${showThemeLabel ? "opacity-100" : "opacity-0"
+                }`}
             >
               {themeLabels[activeScene]}
             </div>
