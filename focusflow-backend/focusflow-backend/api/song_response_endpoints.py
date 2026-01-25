@@ -125,11 +125,11 @@ async def create_song_response(data: SongResponseCreate):
         song_count = get_response_count()
         recommendations = None
 
-        if song_count >= 3:
+        if song_count >= 18:
             try:
                 # Discover NEW music based on learned focus patterns
                 recs = discover_new_music(
-                    min_entries=3,
+                    min_entries=18,
                     top_k=3
                 )
                 if recs:

@@ -11,6 +11,7 @@ export function useEEG() {
   const [currentData, setCurrentData] = useState(null);
   const [error, setError] = useState(null);
   const wsRef = useRef(null);
+  const lastChartUpdateRef = useRef(0);
 
   // Connect to Muse headset
   const connect = useCallback(async () => {
@@ -78,12 +79,17 @@ export function useEEG() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log("[EEG] Data:", data);
       setCurrentData(data);
-      setEegData((prev) => {
-        const newData = [...prev.slice(-49), { time: prev.length, tbr: data.tbr }];
-        return newData;
-      });
+
+      // Throttle chart updates to every 500ms to prevent lag
+      const now = Date.now();
+      if (now - lastChartUpdateRef.current >= 500) {
+        lastChartUpdateRef.current = now;
+        setEegData((prev) => {
+          const newData = [...prev.slice(-49), { time: prev.length, tbr: data.tbr }];
+          return newData;
+        });
+      }
     };
 
     ws.onerror = (err) => {

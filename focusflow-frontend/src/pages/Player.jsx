@@ -273,6 +273,13 @@ export default function Player() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [volume, setVolume] = useState(1);
 
+  // Distraction skip
+  const [distractionSkipMessage, setDistractionSkipMessage] = useState(null);
+  const [distractionCountdown, setDistractionCountdown] = useState(null); // Only shows last 5 seconds
+  const distractionCountRef = useRef(0);
+  const DISTRACTION_LIMIT = 15;
+
+
   // -------------------------
   // TBR Tracking for MongoDB (Continuous)
   // -------------------------
@@ -292,10 +299,50 @@ export default function Player() {
     }
   }, [isPlaying, isStreaming, currentData]);
 
+  // Distraction skip - use ref for focusState to avoid effect re-running
+  const focusStateRef = useRef(focusState);
+  focusStateRef.current = focusState;
+
+  useEffect(() => {
+    if (!isPlaying || !isStreaming || !music) {
+      distractionCountRef.current = 0;
+      setDistractionCountdown(null);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      if (focusStateRef.current === "DISTRACTED") {
+        distractionCountRef.current += 1;
+        const remaining = DISTRACTION_LIMIT - distractionCountRef.current;
+
+        // Show countdown for last 5 seconds only
+        if (remaining <= 5 && remaining > 0) {
+          setDistractionCountdown(remaining);
+        }
+
+        if (distractionCountRef.current >= DISTRACTION_LIMIT) {
+          distractionCountRef.current = 0;
+          setDistractionCountdown(null);
+          isSkippingRef.current = true;
+          music.skipToNextItem();
+          setDistractionSkipMessage("Mind wandering detected - finding better music");
+          setTimeout(() => setDistractionSkipMessage(null), 4000);
+        }
+      } else {
+        if (distractionCountRef.current > 0) {
+          setDistractionCountdown(null);
+        }
+        distractionCountRef.current = 0;
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, isStreaming, music]);
+
   // Save song response to MongoDB
   const saveSongResponse = useCallback(async (action) => {
     const track = currentTrackRef.current;
-    const samples = [...tbrSamplesRef.current]; // Copy samples
+    const samples = [...tbrSamplesRef.current];
 
     if (!track) {
       console.log("No track to save");
@@ -508,7 +555,8 @@ export default function Player() {
       };
       trackStartTimeRef.current = Date.now();
       tbrSamplesRef.current = [];
-      autoSkipTriggeredRef.current = false; // Reset auto-skip guard for new track
+      // Note: autoSkipTriggeredRef is reset in a separate effect when currentTime drops below 2s
+      // This prevents race conditions where the old track's high currentTime triggers an immediate skip
 
       // Check if song has AcousticBrainz data
       setHasAcousticBrainz(null); // Reset to checking state
@@ -583,10 +631,18 @@ export default function Player() {
   }, [music]);
 
   // Auto-skip after MAX_SONG_DURATION seconds (for testing)
+  // Reset the auto-skip flag when a new track starts (currentTime resets to low value)
+  useEffect(() => {
+    if (currentTime < 2 && autoSkipTriggeredRef.current) {
+      autoSkipTriggeredRef.current = false;
+    }
+  }, [currentTime]);
+
   useEffect(() => {
     if (!music || !isPlaying || MAX_SONG_DURATION <= 0) return;
 
-    if (currentTime >= MAX_SONG_DURATION && !autoSkipTriggeredRef.current) {
+    // Only trigger auto-skip if we've been playing this track for a bit (not a race condition)
+    if (currentTime >= MAX_SONG_DURATION && currentTime < MAX_SONG_DURATION + 5 && !autoSkipTriggeredRef.current) {
       autoSkipTriggeredRef.current = true; // Prevent multiple triggers
       console.log(`Auto-skipping after ${MAX_SONG_DURATION} seconds (testing mode)`);
       isSkippingRef.current = false; // Mark as complete, not skip
@@ -698,14 +754,15 @@ export default function Player() {
   // -------------------------
   // UI
   // -------------------------
-  const isAnyModalOpen = isPlaylistPickerOpen || showEegWarning || isSettingsOpen;
+  // Only zoom out for settings panel, not for playlist picker or EEG warning modals
+  const shouldZoomOut = isSettingsOpen;
 
   return (
     <div className="relative min-h-screen overflow-hidden text-white bg-black">
       {/* Main content wrapper - scales down when modal is open */}
       <div
         className={`relative transition-all duration-300 ease-out overflow-hidden ${
-          isAnyModalOpen ? "scale-[0.96] rounded-3xl opacity-90" : "scale-100"
+          shouldZoomOut ? "scale-[0.96] rounded-3xl opacity-90" : "scale-100"
         }`}
         style={{ transformOrigin: "center center", minHeight: "100vh" }}
       >
@@ -1026,35 +1083,70 @@ export default function Player() {
 
         {/* Queue Panel - Slide Up */}
         <div
-          className={`absolute bottom-full left-0 right-0 mb-2 rounded-2xl border border-white/10 overflow-hidden transition-all duration-300 ease-out ${
+          className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-[420px] rounded-3xl border border-white/10 overflow-hidden transition-all duration-300 ease-out ${
             isQueueOpen
               ? "opacity-100 translate-y-0 pointer-events-auto"
               : "opacity-0 translate-y-4 pointer-events-none"
           }`}
           style={{ backgroundColor: "#2f2546" }}
         >
-          <div className="px-5 py-3 border-b border-white/10">
-            <div className="text-white/80 text-sm font-medium">Up Next</div>
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-white/10 bg-gradient-to-r from-[#7532ff]/10 to-transparent">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[#7532ff]/20 flex items-center justify-center">
+                  <ChevronUpIcon />
+                </div>
+                <div>
+                  <div className="text-white text-base font-medium">Up Next</div>
+                  <div className="text-white/40 text-xs">
+                    {queueItems.length} {queueItems.length === 1 ? 'track' : 'tracks'} in queue
+                  </div>
+                </div>
+              </div>
+              {queueItems.some(item => aiSongIds.has(item.id)) && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7532ff]/20 border border-[#7532ff]/30">
+                  <BrainIcon />
+                  <span className="text-[#7532ff] text-xs font-medium">AI Enhanced</span>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="max-h-64 overflow-y-auto">
+
+          {/* Queue List */}
+          <div className="max-h-72 overflow-y-auto queue-scrollbar">
             {queueItems.length === 0 ? (
-              <div className="px-5 py-8 text-white/40 text-sm text-center">
-                No upcoming tracks
+              <div className="px-6 py-12 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                  <MusicIcon />
+                </div>
+                <div className="text-white/50 text-sm">No upcoming tracks</div>
+                <div className="text-white/30 text-xs mt-1">Select a playlist to get started</div>
               </div>
             ) : (
-              <div className="py-2">
+              <div className="p-3 space-y-1">
                 {queueItems.slice(0, 10).map((item, index) => {
                   const isAiSong = aiSongIds.has(item.id);
                   return (
                     <div
                       key={item.id || index}
                       onClick={() => handleJumpToTrack(index)}
-                      className={`flex items-center gap-3 px-5 py-2 hover:bg-white/10 transition cursor-pointer ${isAiSong ? 'bg-[#7532ff]/10' : ''}`}
+                      className={`group relative flex items-center gap-4 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
+                        isAiSong
+                          ? 'bg-gradient-to-r from-[#7532ff]/15 to-[#7532ff]/5 hover:from-[#7532ff]/25 hover:to-[#7532ff]/10'
+                          : 'hover:bg-white/10'
+                      }`}
                     >
-                      {/* Track Number */}
-                      <div className="w-5 text-white/40 text-xs text-right">{index + 1}</div>
+                      {/* Track Number / Play Indicator */}
+                      <div className="w-6 flex items-center justify-center">
+                        <span className="text-white/30 text-sm group-hover:hidden">{index + 1}</span>
+                        <div className="hidden group-hover:block text-white">
+                          <PlayIcon />
+                        </div>
+                      </div>
+
                       {/* Artwork */}
-                      <div className="w-10 h-10 rounded-md overflow-hidden bg-white/10 flex-shrink-0 relative">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/10 flex-shrink-0 relative shadow-lg">
                         {item.artwork ? (
                           <img src={item.artwork} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -1063,29 +1155,41 @@ export default function Player() {
                           </div>
                         )}
                         {isAiSong && (
-                          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#7532ff] flex items-center justify-center shadow-lg">
+                          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-[#7532ff] to-[#5a1fd6] flex items-center justify-center shadow-lg shadow-[#7532ff]/40">
                             <BrainIcon />
                           </div>
                         )}
                       </div>
+
                       {/* Track Info */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-white text-sm truncate">{item.title}</span>
-                          {isAiSong && (
-                            <span className="text-[#7532ff] text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#7532ff]/20">
-                              AI
-                            </span>
-                          )}
+                          <span className="text-white text-sm font-medium truncate group-hover:text-[#7532ff] transition-colors">
+                            {item.title}
+                          </span>
                         </div>
-                        <div className="text-white/50 text-xs truncate">{item.artist}</div>
+                        <div className="text-white/40 text-xs truncate mt-0.5">{item.artist}</div>
                       </div>
+
+                      {/* AI Badge */}
+                      {isAiSong && (
+                        <div className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-[#7532ff]/20 border border-[#7532ff]/30">
+                          <span className="text-[#7532ff] text-[10px] font-bold tracking-wide">AI PICK</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
+
+          {/* Footer hint */}
+          {queueItems.length > 0 && (
+            <div className="px-6 py-3 border-t border-white/5 bg-black/20">
+              <div className="text-white/30 text-xs text-center">Click any track to play it next</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1414,6 +1518,28 @@ export default function Player() {
                 Added to your queue - plays next!
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Distraction Countdown */}
+      {distractionCountdown && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50">
+          <div className="w-24 h-24 rounded-full bg-red-500/90 flex items-center justify-center animate-pulse shadow-2xl shadow-red-500/50">
+            <span className="text-white text-4xl font-bold">{distractionCountdown}</span>
+          </div>
+          <div className="text-center mt-3 text-white/80 text-sm">Skipping soon...</div>
+        </div>
+      )}
+
+      {/* Distraction Skip Toast - Center above player */}
+      {distractionSkipMessage && (
+        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
+          <div className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-2xl">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+              <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-2.625 6c-.54 0-.828.419-.936.634a1.96 1.96 0 0 0-.189.866c0 .298.059.605.189.866.108.215.395.634.936.634.54 0 .828-.419.936-.634.13-.26.189-.568.189-.866 0-.298-.059-.605-.189-.866-.108-.215-.395-.634-.936-.634Zm4.314.634c.108-.215.395-.634.936-.634.54 0 .828.419.936.634.13.26.189.568.189.866 0 .298-.059.605-.189.866-.108.215-.395.634-.936.634-.54 0-.828-.419-.936-.634a1.96 1.96 0 0 1-.189-.866c0-.298.059-.605.189-.866Zm-4.34 7.964a.75.75 0 0 1-1.061-1.06 5.236 5.236 0 0 1 3.73-1.538 5.236 5.236 0 0 1 3.695 1.538.75.75 0 1 1-1.061 1.06 3.736 3.736 0 0 0-2.639-1.098 3.736 3.736 0 0 0-2.664 1.098Z" clipRule="evenodd" />
+            </svg>
+            <span className="font-medium">{distractionSkipMessage}</span>
           </div>
         </div>
       )}
