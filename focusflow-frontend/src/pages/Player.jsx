@@ -4,6 +4,7 @@ import { useEEG } from "../hooks/useEEG";
 import bgFocus from "../assets/bg.png";
 import bgHome from "../assets/bg-home.jpg";
 import bgChill from "../assets/bg-chill.jpg";
+import appleMusicIcon from "../assets/apple-music.svg";
 
 import useMusicKit from "../hooks/useMusicKit";
 
@@ -232,6 +233,11 @@ export default function Player() {
   const [isPlaylistPickerClosing, setIsPlaylistPickerClosing] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [queueItems, setQueueItems] = useState([]);
+  const [showEegWarning, setShowEegWarning] = useState(false);
+  const [hasAcousticBrainz, setHasAcousticBrainz] = useState(null); // null = checking, true/false = result
+
+  // Testing mode: max song duration (set to 0 to disable)
+  const MAX_SONG_DURATION = 45; // seconds
 
   // Settings panel state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -304,7 +310,13 @@ export default function Player() {
         const data = await response.json();
         console.log("Saved to MongoDB:", data.id);
       } else {
-        console.error("Failed to save:", await response.text());
+        const errorData = await response.json();
+        // Don't log as error if it's just not in AcousticBrainz
+        if (errorData.detail?.includes("AcousticBrainz")) {
+          console.log("Skipped saving - not in AcousticBrainz");
+        } else {
+          console.error("Failed to save:", errorData.detail);
+        }
       }
     } catch (err) {
       console.error("Error saving:", err);
@@ -375,7 +387,7 @@ export default function Player() {
       setIsLoading(state === MKStates.loading || state === MKStates.waiting || state === MKStates.stalled);
     };
 
-    const onTrackChange = () => {
+    const onTrackChange = async () => {
       // Save previous track data before updating to new track
       if (currentTrackRef.current) {
         const action = isSkippingRef.current ? "skip" : "complete";
@@ -390,6 +402,7 @@ export default function Player() {
         setTrackArtwork(null);
         setDuration(0);
         currentTrackRef.current = null;
+        setHasAcousticBrainz(null);
         return;
       }
 
@@ -413,6 +426,23 @@ export default function Player() {
       };
       trackStartTimeRef.current = Date.now();
       tbrSamplesRef.current = [];
+
+      // Check if song has AcousticBrainz data
+      setHasAcousticBrainz(null); // Reset to checking state
+      try {
+        const resp = await fetch(
+          `http://localhost:8000/responses/check-features?song_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`
+        );
+        if (resp.ok) {
+          const data = await resp.json();
+          setHasAcousticBrainz(data.has_acousticbrainz);
+        } else {
+          setHasAcousticBrainz(false);
+        }
+      } catch (err) {
+        console.error("Failed to check AcousticBrainz:", err);
+        setHasAcousticBrainz(false);
+      }
     };
 
     const onError = (error) => {
@@ -469,8 +499,25 @@ export default function Player() {
     };
   }, [music]);
 
+  // Auto-skip after MAX_SONG_DURATION seconds (for testing)
+  useEffect(() => {
+    if (!music || !isPlaying || MAX_SONG_DURATION <= 0) return;
+
+    if (currentTime >= MAX_SONG_DURATION) {
+      console.log(`Auto-skipping after ${MAX_SONG_DURATION} seconds (testing mode)`);
+      isSkippingRef.current = false; // Mark as complete, not skip
+      music.skipToNextItem();
+    }
+  }, [music, isPlaying, currentTime]);
+
   async function handlePlayPause() {
     if (!music) return;
+
+    // Block playing if EEG not streaming
+    if (!isStreaming) {
+      setShowEegWarning(true);
+      return;
+    }
 
     try {
       const MKStates = window.MusicKit?.PlaybackStates || {};
@@ -582,10 +629,11 @@ export default function Player() {
         <button
           onClick={authorize}
           disabled={!ready || connected}
-          className="mt-4 px-5 py-2 rounded-full text-white text-sm font-medium hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          className="mt-4 px-5 py-2 rounded-full text-white text-sm font-medium hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
           style={{ backgroundColor: "#7532ff" }}
         >
-          {connected ? "Connected to Apple Music" : ready ? "Connect to Apple Music" : "Loading..."}
+<img src={appleMusicIcon} alt="Apple Music" className="w-5 h-5" />
+          {connected ? "Connected" : ready ? "Connect" : "Loading..."}
         </button>
       </div>
 
@@ -721,14 +769,62 @@ export default function Player() {
       {/* Bottom Left Music Button */}
       <div className="absolute bottom-14 left-10 z-20">
         <button
-          onClick={() => setIsPlaylistPickerOpen(true)}
-          className="w-10 h-10 rounded-lg flex items-center justify-center hover:opacity-80 transition"
+          onClick={() => {
+            if (!isStreaming) {
+              setShowEegWarning(true);
+            } else {
+              setIsPlaylistPickerOpen(true);
+            }
+          }}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center transition ${
+            isStreaming ? "hover:opacity-80" : "opacity-50 cursor-not-allowed"
+          }`}
           style={{ backgroundColor: "#2f2546" }}
-          title="Select Playlist"
+          title={isStreaming ? "Select Playlist" : "Connect EEG first"}
         >
           <MusicIcon />
         </button>
       </div>
+
+      {/* EEG Warning Modal */}
+      {showEegWarning && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center modal-fade-in"
+          onClick={() => setShowEegWarning(false)}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+          {/* Modal */}
+          <div
+            className="relative w-[400px] rounded-3xl border border-white/10 shadow-2xl overflow-hidden modal-pop-in"
+            style={{ backgroundColor: "rgba(47, 37, 70, 0.95)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+              <div className="text-red-400 text-lg font-medium">EEG Not Connected</div>
+              <button
+                onClick={() => setShowEegWarning(false)}
+                className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 py-6">
+              <div className="text-white/80 text-sm leading-relaxed">
+                Please connect your EEG headset before playing music. This allows us to track your focus data and personalize your experience.
+              </div>
+              <div className="mt-4 flex items-center gap-3 text-white/50 text-xs">
+                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                <span>Headset not detected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {/* Bottom Center Player (Deky UI) */}
@@ -745,26 +841,38 @@ export default function Player() {
 
           {/* Track Info */}
           <div className="min-w-[120px]">
-            <div className="text-white text-sm font-medium truncate max-w-[160px]">{trackTitle}</div>
+            <div className="flex items-center gap-2">
+              <div className="text-white text-sm font-medium truncate max-w-[140px]">{trackTitle}</div>
+              {/* AcousticBrainz Indicator */}
+              {hasAcousticBrainz === null && trackTitle !== "Not Playing" && (
+                <div className="w-2 h-2 rounded-full bg-white/30 animate-pulse" title="Checking audio features..." />
+              )}
+              {hasAcousticBrainz === true && (
+                <div className="w-2 h-2 rounded-full bg-green-500 shadow-lg shadow-green-500/50" title="Will save - AcousticBrainz data found" />
+              )}
+              {hasAcousticBrainz === false && trackTitle !== "Not Playing" && (
+                <div className="w-2 h-2 rounded-full bg-red-500 shadow-lg shadow-red-500/50" title="Won't save - Not in AcousticBrainz" />
+              )}
+            </div>
             <div className="text-white/60 text-xs truncate max-w-[160px]">{trackSubtitle}</div>
           </div>
 
           {/* Progress */}
           <div className="flex items-center gap-3">
             <span className="text-white/50 text-xs w-10 text-right">
-              {duration > 0 ? formatTime(currentTime) : "--:--"}
+              {formatTime(Math.min(currentTime, MAX_SONG_DURATION))}
             </span>
             <div className="w-48 h-1 bg-white/20 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-300"
                 style={{
-                  width: duration > 0 ? `${(currentTime / duration) * 100}%` : "0%",
+                  width: `${(Math.min(currentTime, MAX_SONG_DURATION) / MAX_SONG_DURATION) * 100}%`,
                   backgroundColor: "#7532ff",
                 }}
               />
             </div>
             <span className="text-white/50 text-xs w-10">
-              {duration > 0 ? formatTime(duration) : "--:--"}
+              {formatTime(MAX_SONG_DURATION)}
             </span>
           </div>
 

@@ -162,3 +162,32 @@ def test_connection() -> bool:
     except Exception as e:
         print(f"MongoDB connection failed: {e}")
         return False
+
+
+def delete_useless_responses(user_id: str = "default_user") -> int:
+    """Delete responses with no EEG data or very short listen time"""
+    collection = get_collection("song_responses")
+
+    # Delete where: no tbr_samples, or empty tbr_samples, or listened < 10 seconds
+    result = collection.delete_many({
+        "user_id": user_id,
+        "$or": [
+            {"tbr_samples": {"$exists": False}},
+            {"tbr_samples": []},
+            {"tbr_samples": {"$size": 0}},
+            {"listened_duration": {"$lt": 10}},
+            {"tbr_average": 0},
+            {"tbr_average": {"$exists": False}}
+        ]
+    })
+
+    print(f"Deleted {result.deleted_count} useless responses")
+    return result.deleted_count
+
+
+def delete_all_responses(user_id: str = "default_user") -> int:
+    """Delete all responses for a user (use with caution)"""
+    collection = get_collection("song_responses")
+    result = collection.delete_many({"user_id": user_id})
+    print(f"Deleted {result.deleted_count} responses for user {user_id}")
+    return result.deleted_count
