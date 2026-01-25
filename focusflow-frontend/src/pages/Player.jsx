@@ -241,7 +241,7 @@ export default function Player() {
   // -------------------------
   // MusicKit Logic
   // -------------------------
-  const { music, ready, authorize, connected, fetchPlaylists, playPlaylist } = useMusicKit();
+  const { music, ready, authorize, connected, fetchPlaylists, playPlaylist, searchAndQueueSongs } = useMusicKit();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -262,9 +262,9 @@ export default function Player() {
   const [isEegWarningClosing, setIsEegWarningClosing] = useState(false);
   const [hasAcousticBrainz, setHasAcousticBrainz] = useState(null); // null = checking, true/false = result
 
-  // AI Recommendations state
-  const [recommendedSongIds, setRecommendedSongIds] = useState(new Set());
+  // AI Music Discovery
   const [toast, setToast] = useState(null); // { message, songs } or null
+  const [aiSongIds, setAiSongIds] = useState(new Set()); // Track AI-added song IDs
 
   // Testing mode: max song duration (set to 0 to disable)
   const MAX_SONG_DURATION = 45; // seconds
@@ -280,6 +280,7 @@ export default function Player() {
   const currentTrackRef = useRef(null);
   const trackStartTimeRef = useRef(null);
   const isSkippingRef = useRef(false);
+  const autoSkipTriggeredRef = useRef(false); // Guard against multiple auto-skips
 
   // Collect TBR continuously whenever EEG data updates while playing
   useEffect(() => {
@@ -339,26 +340,45 @@ export default function Player() {
       if (response.ok) {
         const data = await response.json();
         console.log("Saved to MongoDB:", data.id);
+        console.log("Full response data:", data);
+        console.log("Recommendations in response:", data.recommendations);
+        console.log("Song count:", data.song_count);
 
-        // Handle ML recommendations if present
+        // Handle ML recommendations - NEW music discovery
         if (data.recommendations && data.recommendations.length > 0) {
-          console.log("Received recommendations:", data.recommendations);
+          console.log("Discovered NEW music:", data.recommendations);
 
-          // Track recommended song IDs for UI indicator
-          const newRecommendedIds = new Set(recommendedSongIds);
-          data.recommendations.forEach((rec) => {
-            newRecommendedIds.add(rec.song_id);
-          });
-          setRecommendedSongIds(newRecommendedIds);
+          // Search Apple Music and add to queue
+          const addedSongs = await searchAndQueueSongs(data.recommendations);
 
-          // Show toast notification
-          setToast({
-            message: `Added ${data.recommendations.length} AI-recommended songs`,
-            songs: data.recommendations,
-          });
+          if (addedSongs.length > 0) {
+            // Track AI song IDs for queue indicator
+            const newAiIds = new Set(aiSongIds);
+            addedSongs.forEach(s => {
+              if (s.catalogId) newAiIds.add(s.catalogId);
+            });
+            setAiSongIds(newAiIds);
 
-          // Auto-hide toast after 5 seconds
-          setTimeout(() => setToast(null), 5000);
+            // Show toast with songs that were actually added
+            setToast({
+              message: `Added ${addedSongs.length} new songs to your queue`,
+              songs: addedSongs.map(s => ({
+                song_name: s.appleMusicName || s.song_name,
+                artist_name: s.appleMusicArtist || s.artist_name,
+                focus_score: s.focus_score,
+                artwork: s.artwork
+              })),
+            });
+          } else {
+            // Show toast but note songs couldn't be added
+            setToast({
+              message: `Found ${data.recommendations.length} songs (not on Apple Music)`,
+              songs: data.recommendations,
+            });
+          }
+
+          // Auto-hide toast after 8 seconds
+          setTimeout(() => setToast(null), 8000);
         }
       } else {
         const errorData = await response.json();
@@ -375,7 +395,7 @@ export default function Player() {
 
     // Reset for next track
     tbrSamplesRef.current = [];
-  }, []);
+  }, [searchAndQueueSongs, aiSongIds]);
 
   // Loading timeout - prevent infinite spinner
   useEffect(() => {
@@ -488,6 +508,7 @@ export default function Player() {
       };
       trackStartTimeRef.current = Date.now();
       tbrSamplesRef.current = [];
+      autoSkipTriggeredRef.current = false; // Reset auto-skip guard for new track
 
       // Check if song has AcousticBrainz data
       setHasAcousticBrainz(null); // Reset to checking state
@@ -565,7 +586,8 @@ export default function Player() {
   useEffect(() => {
     if (!music || !isPlaying || MAX_SONG_DURATION <= 0) return;
 
-    if (currentTime >= MAX_SONG_DURATION) {
+    if (currentTime >= MAX_SONG_DURATION && !autoSkipTriggeredRef.current) {
+      autoSkipTriggeredRef.current = true; // Prevent multiple triggers
       console.log(`Auto-skipping after ${MAX_SONG_DURATION} seconds (testing mode)`);
       isSkippingRef.current = false; // Mark as complete, not skip
       music.skipToNextItem();
@@ -618,13 +640,23 @@ export default function Player() {
   async function handleJumpToTrack(queueIndex) {
     if (!music) return;
     try {
-      // queueIndex is the index within queueItems (upcoming tracks)
-      // We need to add currentPosition + 1 to get the actual queue index
-      const currentPosition = music.queue?.position || 0;
-      const actualIndex = currentPosition + 1 + queueIndex;
+      const item = queueItems[queueIndex];
+      if (!item) return;
 
       isSkippingRef.current = true; // Mark as skip before changing track
-      await music.changeToMediaAtIndex(actualIndex);
+
+      // Try to find the item in the queue by ID and play it
+      const queueItemsList = music.queue?.items || [];
+      const targetIndex = queueItemsList.findIndex(q => q.id === item.id);
+
+      if (targetIndex >= 0) {
+        await music.changeToMediaAtIndex(targetIndex);
+      } else {
+        // Fallback: skip forward to reach the track
+        const currentPosition = music.queue?.position || 0;
+        const actualIndex = currentPosition + 1 + queueIndex;
+        await music.changeToMediaAtIndex(actualIndex);
+      }
     } catch (err) {
       console.error("Jump to track error:", err);
       isSkippingRef.current = false;
@@ -1012,14 +1044,12 @@ export default function Player() {
             ) : (
               <div className="py-2">
                 {queueItems.slice(0, 10).map((item, index) => {
-                  const isAiRecommended = recommendedSongIds.has(item.id);
+                  const isAiSong = aiSongIds.has(item.id);
                   return (
                     <div
                       key={item.id || index}
                       onClick={() => handleJumpToTrack(index)}
-                      className={`flex items-center gap-3 px-5 py-2 hover:bg-white/10 transition cursor-pointer ${
-                        isAiRecommended ? "bg-[#7532ff]/10" : ""
-                      }`}
+                      className={`flex items-center gap-3 px-5 py-2 hover:bg-white/10 transition cursor-pointer ${isAiSong ? 'bg-[#7532ff]/10' : ''}`}
                     >
                       {/* Track Number */}
                       <div className="w-5 text-white/40 text-xs text-right">{index + 1}</div>
@@ -1032,8 +1062,7 @@ export default function Player() {
                             <MusicIcon />
                           </div>
                         )}
-                        {/* AI Badge */}
-                        {isAiRecommended && (
+                        {isAiSong && (
                           <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#7532ff] flex items-center justify-center shadow-lg">
                             <BrainIcon />
                           </div>
@@ -1043,8 +1072,8 @@ export default function Player() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-white text-sm truncate">{item.title}</span>
-                          {isAiRecommended && (
-                            <span className="text-[#7532ff] text-xs font-medium px-1.5 py-0.5 rounded bg-[#7532ff]/20">
+                          {isAiSong && (
+                            <span className="text-[#7532ff] text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#7532ff]/20">
                               AI
                             </span>
                           )}
@@ -1320,44 +1349,70 @@ export default function Player() {
         />
       )}
 
-      {/* AI Recommendations Toast */}
+      {/* AI Music Discovery Toast */}
       {toast && (
-        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
+        <div className="fixed top-8 right-10 z-[100] animate-toast-in">
           <div
-            className="rounded-2xl border border-white/20 shadow-2xl px-6 py-4 backdrop-blur-xl"
-            style={{ backgroundColor: "rgba(47, 37, 70, 0.95)" }}
+            className="rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+            style={{ backgroundColor: "rgba(47, 37, 70, 0.95)", backdropFilter: "blur(20px)", width: "360px" }}
           >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-[#7532ff] flex items-center justify-center">
-                <BrainIcon />
-              </div>
-              <div>
-                <div className="text-white font-medium">{toast.message}</div>
-                <div className="text-white/50 text-xs">Based on your brain activity</div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7532ff] to-[#5a1fd6] flex items-center justify-center shadow-lg shadow-[#7532ff]/30">
+                  <BrainIcon />
+                </div>
+                <div>
+                  <div className="text-white font-medium text-sm">New Music For You</div>
+                  <div className="text-white/40 text-xs">Matched to your brain's focus patterns</div>
+                </div>
               </div>
               <button
                 onClick={() => setToast(null)}
-                className="ml-4 text-white/40 hover:text-white transition"
+                className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition"
               >
-                ✕
+                <CloseIcon />
               </button>
             </div>
-            <div className="space-y-2">
+
+            {/* Songs List */}
+            <div className="p-3 space-y-2">
               {toast.songs.map((song, idx) => (
                 <div
                   key={song.song_id || idx}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5"
+                  className="flex items-center gap-3 p-2 rounded-xl bg-white/5 hover:bg-white/10 transition cursor-pointer"
                 >
-                  <div className="text-[#7532ff] text-sm font-medium w-5">{idx + 1}</div>
+                  {/* Album Art or Rank */}
+                  {song.artwork ? (
+                    <div className="w-11 h-11 rounded-lg overflow-hidden flex-shrink-0">
+                      <img src={song.artwork} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-11 h-11 rounded-lg bg-[#7532ff]/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[#7532ff] text-lg font-bold">{idx + 1}</span>
+                    </div>
+                  )}
+                  {/* Song Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-white text-sm truncate">{song.song_name}</div>
+                    <div className="text-white text-sm font-medium truncate">{song.song_name}</div>
                     <div className="text-white/50 text-xs truncate">{song.artist_name}</div>
                   </div>
-                  <div className="text-[#7532ff] text-xs font-medium">
-                    {Math.round(song.focus_score * 100)}%
+                  {/* Focus Score */}
+                  <div className="flex flex-col items-end">
+                    <div className="text-[#7532ff] text-sm font-bold">
+                      {Math.round(song.focus_score * 100)}%
+                    </div>
+                    <div className="text-white/30 text-[10px]">match</div>
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Footer hint */}
+            <div className="px-5 py-3 border-t border-white/10 bg-white/5">
+              <div className="text-white/40 text-xs text-center">
+                Added to your queue - plays next!
+              </div>
             </div>
           </div>
         </div>

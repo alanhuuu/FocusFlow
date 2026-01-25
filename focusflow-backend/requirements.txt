@@ -8,3 +8,4 @@ numpy
 websockets
 xgboost
 scipy
+scikit-learn

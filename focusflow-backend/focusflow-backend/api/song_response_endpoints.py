@@ -16,7 +16,7 @@ from services.mongodb_service import (
     get_response_count
 )
 from services.acousticbrainz_service import get_audio_features, get_musicbrainz_id, get_acousticbrainz_features
-from ml.live_training import train_and_recommend
+from ml.music_discovery import discover_new_music
 
 router = APIRouter(prefix="/responses", tags=["Song Responses"])
 
@@ -76,16 +76,18 @@ async def create_song_response(data: SongResponseCreate):
     """
     # Reject if no EEG data
     if not data.tbr_samples or len(data.tbr_samples) < 3:
+        print(f"REJECTED {data.song_name}: Only {len(data.tbr_samples) if data.tbr_samples else 0} TBR samples (need 3+)")
         raise HTTPException(
             status_code=400,
-            detail="No EEG data - need at least 3 TBR samples to save"
+            detail=f"No EEG data - only {len(data.tbr_samples) if data.tbr_samples else 0} TBR samples (need 3+)"
         )
 
     # Reject if listened for less than 10 seconds
     if data.listened_duration < 10:
+        print(f"REJECTED {data.song_name}: Only listened {data.listened_duration}s (need 10+)")
         raise HTTPException(
             status_code=400,
-            detail="Listened for less than 10 seconds - not saving"
+            detail=f"Listened only {data.listened_duration}s - need at least 10 seconds"
         )
 
     try:
@@ -98,6 +100,7 @@ async def create_song_response(data: SongResponseCreate):
 
         # Reject if song not in AcousticBrainz (only estimated features)
         if audio_features.get("source") != "acousticbrainz":
+            print(f"REJECTED {data.song_name}: Not in AcousticBrainz")
             raise HTTPException(
                 status_code=400,
                 detail="Song not found in AcousticBrainz - not saving"
@@ -124,25 +127,26 @@ async def create_song_response(data: SongResponseCreate):
 
         if song_count >= 3:
             try:
-                # Train model and get recommendations
-                recs = train_and_recommend(
+                # Discover NEW music based on learned focus patterns
+                recs = discover_new_music(
                     min_entries=3,
-                    top_k=3,
-                    exclude_song_ids={data.song_id}  # Exclude current song
+                    top_k=3
                 )
                 if recs:
                     recommendations = [
                         RecommendationItem(
-                            song_id=r["song_id"],
+                            song_id=r.get("mbid", ""),  # Use MBID as song_id
                             song_name=r["song_name"],
                             artist_name=r["artist_name"],
                             focus_score=r["focus_score"]
                         )
                         for r in recs
                     ]
-                    print(f"Generated {len(recommendations)} recommendations")
+                    print(f"Discovered {len(recommendations)} NEW songs")
             except Exception as e:
-                print(f"ML recommendation failed: {e}")
+                print(f"Music discovery failed: {e}")
+                import traceback
+                traceback.print_exc()
                 # Don't fail the whole request if ML fails
 
         return SongResponseOut(

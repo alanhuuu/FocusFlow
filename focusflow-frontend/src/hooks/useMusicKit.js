@@ -203,6 +203,59 @@ export default function useMusicKit() {
     }
   }, [music]);
 
+  // Search Apple Music and add songs to queue
+  const searchAndQueueSongs = useCallback(async (songs) => {
+    if (!music || !music.isAuthorized) {
+      console.log("searchAndQueueSongs: Not ready or not authorized");
+      return [];
+    }
+
+    const addedSongs = [];
+
+    for (const song of songs) {
+      try {
+        // Search Apple Music for this song
+        const query = `${song.song_name} ${song.artist_name}`;
+        console.log(`Searching Apple Music for: ${query}`);
+
+        const result = await music.api.music('/v1/catalog/us/search', {
+          term: query,
+          types: ['songs'],
+          limit: 1
+        });
+
+        const tracks = result?.data?.results?.songs?.data || [];
+
+        if (tracks.length > 0) {
+          const track = tracks[0];
+          const catalogId = track.id;
+
+          console.log(`Found: ${track.attributes.name} by ${track.attributes.artistName}`);
+
+          // Add to queue at the beginning (play next)
+          await music.playNext({ song: catalogId });
+
+          addedSongs.push({
+            ...song,
+            catalogId,
+            appleMusicName: track.attributes.name,
+            appleMusicArtist: track.attributes.artistName,
+            artwork: track.attributes.artwork?.url?.replace('{w}', '200').replace('{h}', '200')
+          });
+
+          console.log(`Added to queue: ${track.attributes.name}`);
+        } else {
+          console.log(`Not found on Apple Music: ${song.song_name}`);
+        }
+      } catch (err) {
+        console.error(`Error searching/adding ${song.song_name}:`, err);
+      }
+    }
+
+    console.log(`Added ${addedSongs.length}/${songs.length} songs to queue`);
+    return addedSongs;
+  }, [music]);
+
   return {
     music,
     ready,
@@ -210,5 +263,6 @@ export default function useMusicKit() {
     authorize,
     fetchPlaylists,
     playPlaylist,
+    searchAndQueueSongs,
   };
 }

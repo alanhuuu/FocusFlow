@@ -198,3 +198,64 @@ def train_and_recommend(min_entries: int = 3, top_k: int = 3, exclude_song_ids: 
     recommendations = recommend_songs(model, feature_cols, candidates, top_k=top_k)
 
     return recommendations
+
+
+def score_queue_songs(queue_songs: list, min_entries: int = 3, top_k: int = 3):
+    """
+    Score songs from the user's current queue based on learned focus patterns.
+
+    Args:
+        queue_songs: List of {song_id, song_name, artist_name} from frontend
+        min_entries: Minimum training data required
+        top_k: Number of recommendations to return
+
+    Returns:
+        - None if not enough training data
+        - List of scored recommendations from the queue
+    """
+    from services.acousticbrainz_service import get_audio_features
+
+    # Train model on user's history
+    result = train_model_from_mongodb(min_entries=min_entries)
+    if result is None:
+        return None
+
+    model, feature_cols, threshold = result
+
+    # Build candidates from queue songs with audio features
+    candidates = []
+    for song in queue_songs:
+        song_id = song.get("song_id", "")
+        song_name = song.get("song_name", "")
+        artist_name = song.get("artist_name", "")
+
+        if not song_name:
+            continue
+
+        # Fetch audio features from AcousticBrainz
+        try:
+            audio_features = get_audio_features(song_id, song_name, artist_name)
+
+            # Only include if we got real features
+            if audio_features.get("source") == "acousticbrainz":
+                candidates.append({
+                    "song_id": song_id,
+                    "song_name": song_name,
+                    "artist_name": artist_name,
+                    "audio_features": audio_features,
+                    "tbr_average": 0,  # Unknown for new songs
+                    "tbr_samples": [],
+                })
+        except Exception as e:
+            print(f"Failed to get features for {song_name}: {e}")
+            continue
+
+    if not candidates:
+        print("No queue songs have AcousticBrainz data")
+        return []
+
+    # Score candidates
+    recommendations = recommend_songs(model, feature_cols, candidates, top_k=top_k)
+
+    print(f"Scored {len(candidates)} queue songs, returning top {len(recommendations)}")
+    return recommendations
