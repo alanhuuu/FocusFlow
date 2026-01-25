@@ -35,7 +35,32 @@ const LightbulbIcon = () => (
 
 const GiftIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <path d="M9.375 3a1.875 1.875 0 0 0 0 3.75h1.875v4.5H3.375A1.875 1.875 0 0 1 1.5 9.375v-.75c0-1.036.84-1.875 1.875-1.875h3.193A3.375 3.375 0 0 1 12 2.753a3.375 3.375 0 0 1 5.432 3.997h3.193c1.035 0 1.875.84 1.875 1.875v.75c0 1.036-.84 1.875-1.875 1.875H12.75v-4.5h1.875a1.875 1.875 0 1 0-1.875-1.875V6.75h-1.5V4.875C11.25 3.839 10.41 3 9.375 3ZM11.25 12.75H3v6.75a2.25 2.25 0 0 0 2.25 2.25h6v-9ZM12.75 12.75v9h6a2.25 2.25 0 0 0 2.25-2.25v-6.75h-8.25Z" />
+    <path d="M12 2C10.34 2 9 3.34 9 5c0 .35.07.69.18 1H4c-.55 0-1 .45-1 1v2c0 .55.45 1 1 1h1v9c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-9h1c.55 0 1-.45 1-1V7c0-.55-.45-1-1-1h-5.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3zm0 2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM4 7h7v2H4V7zm9 0h7v2h-7V7zM6 10h5v9H7c-.55 0-1-.45-1-1v-8zm7 0h5v8c0 .55-.45 1-1 1h-4v-9z" />
+  </svg>
+);
+
+const VolumeIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" />
+    <path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+  </svg>
+);
+
+const LogoutIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path fillRule="evenodd" d="M7.5 3.75A1.5 1.5 0 0 0 6 5.25v13.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V15a.75.75 0 0 1 1.5 0v3.75a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3V5.25a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3V9A.75.75 0 0 1 15 9V5.25a1.5 1.5 0 0 0-1.5-1.5h-6Zm10.72 4.72a.75.75 0 0 1 1.06 0l3 3a.75.75 0 0 1 0 1.06l-3 3a.75.75 0 1 1-1.06-1.06l1.72-1.72H9a.75.75 0 0 1 0-1.5h10.94l-1.72-1.72a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+  </svg>
+);
+
+const TimerIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 6a.75.75 0 0 0-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 0 0 0-1.5h-3.75V6Z" clipRule="evenodd" />
   </svg>
 );
 
@@ -208,6 +233,10 @@ export default function Player() {
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [queueItems, setQueueItems] = useState([]);
 
+  // Settings panel state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [volume, setVolume] = useState(1);
+
   // -------------------------
   // TBR Tracking for MongoDB (Continuous)
   // -------------------------
@@ -312,11 +341,27 @@ export default function Player() {
   useEffect(() => {
     async function loadPlaylists() {
       if (!connected) return;
+      // Small delay to ensure authorization is fully processed
+      await new Promise(resolve => setTimeout(resolve, 500));
       const list = await fetchPlaylists();
+      console.log("Loaded playlists:", list);
       setPlaylists(list || []);
     }
     loadPlaylists();
   }, [connected, fetchPlaylists]);
+
+  // Refetch playlists when playlist picker opens (fallback)
+  useEffect(() => {
+    async function refetchPlaylists() {
+      if (!isPlaylistPickerOpen || !connected) return;
+      if (playlists.length === 0) {
+        console.log("Playlist picker opened with no playlists, refetching...");
+        const list = await fetchPlaylists();
+        setPlaylists(list || []);
+      }
+    }
+    refetchPlaylists();
+  }, [isPlaylistPickerOpen, connected, playlists.length, fetchPlaylists]);
 
   // MusicKit player state (v3 API)
   useEffect(() => {
@@ -477,6 +522,38 @@ export default function Player() {
     }
   }
 
+  // Volume change handler
+  function handleVolumeChange(newVolume) {
+    setVolume(newVolume);
+    if (music) {
+      music.volume = newVolume;
+    }
+  }
+
+  // Logout from Apple Music
+  async function handleLogout() {
+    if (!music) return;
+    try {
+      await music.unauthorize();
+      setTrackTitle("Not Playing");
+      setTrackSubtitle("Select a playlist");
+      setTrackArtwork(null);
+      setPlaylists([]);
+      setIsSettingsOpen(false);
+      window.location.reload(); // Refresh to reset state
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+  }
+
+  // Timer preset options
+  const timerPresets = [
+    { label: "15 min", value: 15 * 60 },
+    { label: "25 min", value: 25 * 60 },
+    { label: "45 min", value: 45 * 60 },
+    { label: "60 min", value: 60 * 60 },
+  ];
+
   // -------------------------
   // UI
   // -------------------------
@@ -508,7 +585,7 @@ export default function Player() {
           className="mt-4 px-5 py-2 rounded-full text-white text-sm font-medium hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ backgroundColor: "#7532ff" }}
         >
-          {connected ? "Connected" : ready ? "Connect" : "Loading..."}
+          {connected ? "Connected to Apple Music" : ready ? "Connect to Apple Music" : "Loading..."}
         </button>
       </div>
 
@@ -910,6 +987,7 @@ export default function Player() {
             <GiftIcon />
           </button>
           <button
+            onClick={() => setIsSettingsOpen(true)}
             className="w-10 h-10 rounded-lg flex items-center justify-center hover:opacity-80 transition"
             style={{ backgroundColor: "#2f2546" }}
           >
@@ -924,6 +1002,125 @@ export default function Player() {
           </button>
         </div>
       </div>
+
+      {/* Settings Panel - Slide from Right */}
+      <div
+        className={`fixed top-0 right-0 h-full w-80 z-50 transform transition-transform duration-300 ease-out ${
+          isSettingsOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{ backgroundColor: "rgba(47, 37, 70, 0.98)" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+          <div className="text-white text-lg font-medium">Settings</div>
+          <button
+            onClick={() => setIsSettingsOpen(false)}
+            className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        {/* Settings Content */}
+        <div className="p-6 space-y-6">
+          {/* Volume Control */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-white/80">
+              <VolumeIcon />
+              <span className="text-sm font-medium">Volume</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                className="w-full h-2 bg-white/20 rounded-full appearance-none cursor-pointer accent-[#7532ff]"
+                style={{
+                  background: `linear-gradient(to right, #7532ff ${volume * 100}%, rgba(255,255,255,0.2) ${volume * 100}%)`,
+                }}
+              />
+              <span className="text-white/60 text-sm w-10 text-right">{Math.round(volume * 100)}%</span>
+            </div>
+          </div>
+
+          {/* Timer Presets */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-white/80">
+              <TimerIcon />
+              <span className="text-sm font-medium">Focus Timer</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {timerPresets.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => {
+                    setSecondsLeft(preset.value);
+                    setIsTimerRunning(false);
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    secondsLeft === preset.value
+                      ? "bg-[#7532ff] text-white"
+                      : "bg-white/10 text-white/70 hover:bg-white/20"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-white/10" />
+
+          {/* Apple Music Connection Status */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-white/80">
+              <MusicIcon />
+              <span className="text-sm font-medium">Apple Music</span>
+            </div>
+            <div className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-white/40"}`} />
+                <span className="text-white/70 text-sm">
+                  {connected ? "Connected" : "Not connected"}
+                </span>
+              </div>
+            </div>
+            {connected && (
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition"
+              >
+                <LogoutIcon />
+                <span className="text-sm font-medium">Sign Out of Apple Music</span>
+              </button>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-white/10" />
+
+          {/* About Section */}
+          <div className="space-y-2">
+            <div className="text-white/40 text-xs uppercase tracking-wider">About</div>
+            <div className="text-white/60 text-sm">FocusFlow v1.0</div>
+            <div className="text-white/40 text-xs">
+              EEG-powered focus tracking with adaptive music
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Settings Backdrop */}
+      {isSettingsOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
+          onClick={() => setIsSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }

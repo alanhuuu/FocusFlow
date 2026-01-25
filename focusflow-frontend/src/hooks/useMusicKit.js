@@ -106,11 +106,26 @@ export default function useMusicKit() {
   }, [music]);
 
   const fetchPlaylists = useCallback(async () => {
-    if (!music) return [];
+    if (!music) {
+      console.log("fetchPlaylists: No music instance");
+      return [];
+    }
+
+    // Ensure we're authorized before fetching
+    if (!music.isAuthorized) {
+      console.log("fetchPlaylists: Not authorized, attempting to authorize...");
+      try {
+        await music.authorize();
+      } catch (err) {
+        console.error("fetchPlaylists: Authorization failed:", err);
+        return [];
+      }
+    }
 
     try {
       console.log("Fetching playlists...");
-      const result = await music.api.music('/v1/me/library/playlists', { limit: 25 });
+      const result = await music.api.music('/v1/me/library/playlists', { limit: 100 });
+      console.log("API response:", result);
       const playlists = result?.data?.data || [];
       console.log("Found", playlists.length, "playlists");
       return playlists;
