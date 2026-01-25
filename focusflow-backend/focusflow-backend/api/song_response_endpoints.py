@@ -10,9 +10,11 @@ from services.mongodb_service import (
     get_all_song_responses,
     get_song_response_stats,
     get_responses_for_training,
-    test_connection
+    test_connection,
+    delete_useless_responses,
+    delete_all_responses
 )
-from services.acousticbrainz_service import get_audio_features
+from services.acousticbrainz_service import get_audio_features, get_musicbrainz_id, get_acousticbrainz_features
 
 router = APIRouter(prefix="/responses", tags=["Song Responses"])
 
@@ -58,8 +60,23 @@ async def health_check():
 async def create_song_response(data: SongResponseCreate):
     """
     Save a song response with EEG data.
-    Automatically fetches audio features for the song.
+    Automatically fetches audio features from AcousticBrainz.
+    Only saves if there's valid EEG data AND song is in AcousticBrainz.
     """
+    # Reject if no EEG data
+    if not data.tbr_samples or len(data.tbr_samples) < 3:
+        raise HTTPException(
+            status_code=400,
+            detail="No EEG data - need at least 3 TBR samples to save"
+        )
+
+    # Reject if listened for less than 10 seconds
+    if data.listened_duration < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Listened for less than 10 seconds - not saving"
+        )
+
     try:
         # Get audio features for this song
         audio_features = get_audio_features(
@@ -67,6 +84,13 @@ async def create_song_response(data: SongResponseCreate):
             data.song_name,
             data.artist_name
         )
+
+        # Reject if song not in AcousticBrainz (only estimated features)
+        if audio_features.get("source") != "acousticbrainz":
+            raise HTTPException(
+                status_code=400,
+                detail="Song not found in AcousticBrainz - not saving"
+            )
 
         # Save to MongoDB
         doc_id = save_song_response(
@@ -129,5 +153,76 @@ async def get_training_data():
             "ready_for_training": len(responses) >= 20,
             "data": responses
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/cleanup")
+async def cleanup_useless_data():
+    """
+    Delete all responses with no EEG data or very short listen time.
+    Removes: empty tbr_samples, tbr_average=0, listened < 10 seconds.
+    """
+    try:
+        deleted_count = delete_useless_responses()
+        return {
+            "message": f"Cleanup complete",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/all")
+async def delete_all_data():
+    """
+    Delete ALL song responses. Use with caution!
+    """
+    try:
+        deleted_count = delete_all_responses()
+        return {
+            "message": "All responses deleted",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/check-features")
+async def check_audio_features(song_name: str, artist_name: str):
+    """
+    Check if a song has AcousticBrainz data available.
+    Returns the source type and features if found.
+    """
+    try:
+        # Get MusicBrainz ID
+        mbid = get_musicbrainz_id(song_name, artist_name)
+
+        if not mbid:
+            return {
+                "has_acousticbrainz": False,
+                "source": "estimated",
+                "mbid": None,
+                "message": "Song not found in MusicBrainz"
+            }
+
+        # Try to get AcousticBrainz features
+        features = get_acousticbrainz_features(mbid)
+
+        if features:
+            return {
+                "has_acousticbrainz": True,
+                "source": "acousticbrainz",
+                "mbid": mbid,
+                "features": features,
+                "message": "Real audio features available"
+            }
+        else:
+            return {
+                "has_acousticbrainz": False,
+                "source": "estimated",
+                "mbid": mbid,
+                "message": "MBID found but no AcousticBrainz data"
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
