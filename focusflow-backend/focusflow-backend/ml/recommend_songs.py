@@ -43,15 +43,31 @@ def load_model():
 
 
 
-def load_candidate_songs():
-    from acousticbrainz_live import get_live_candidates
+def load_candidate_songs(feature_cols):
+    from data.mongo_loader import fetch_song_docs
+    from ml.alan_json_adapter import alan_doc_to_candidate
 
-    # You can change "pop" to anything (study, lofi, rock, etc.)
-    candidates = get_live_candidates(search_query="lofi", limit=75)
+    docs = fetch_song_docs(limit=200)
+
+    seen = set()
+    candidates = []
+
+    for d in docs:
+        sid = str(d.get("song_id"))
+        if sid in seen:
+            continue
+        seen.add(sid)
+
+        candidate = alan_doc_to_candidate(d, feature_cols=feature_cols)
 
 
-    print(f"✅ Loaded {len(candidates)} live candidate songs")
+        candidates.append(candidate)
+
+    print(f"✅ Loaded {len(candidates)} UNIQUE candidate songs from MongoDB")
     return candidates
+
+
+
 
 
 
@@ -127,13 +143,12 @@ def recommend_top_k(model, candidate_songs, feature_cols, top_k=20):
 
 def main():
     model, feature_cols = load_model()
-    candidate_songs = load_candidate_songs()
+    candidate_songs = load_candidate_songs(feature_cols)
     top_3 = recommend_top_k(model, candidate_songs, feature_cols=feature_cols, top_k=3)
 
-
-    # ✅ Print JSON output nicely
     print("\n🎧 TOP 3 FOCUSFLOW RECOMMENDATIONS:\n")
     print(json.dumps(top_3, indent=2))
+
 
 
 if __name__ == "__main__":
