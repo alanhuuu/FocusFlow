@@ -56,31 +56,50 @@ def save_song_response(
     session_id: str = None
 ) -> str:
     """
-    Save a song response with EEG data to MongoDB
+    Save a song response with EEG data to MongoDB.
+    Uses upsert to prevent duplicate songs - updates if song already exists.
 
-    Returns: The inserted document ID as string
+    Returns: The document ID as string
     """
     collection = get_collection("song_responses")
 
-    document = {
+    # Query to find existing song for this user
+    query = {
         "user_id": user_id,
-        "song_id": song_id,
-        "song_name": song_name,
-        "artist_name": artist_name,
-        "tbr_average": tbr_average,
-        "focus_state": focus_state,
-        "action": action,  # "skip", "love", "complete"
-        "listened_duration": listened_duration,
-        "total_duration": total_duration,
-        "audio_features": audio_features or {},
-        "session_id": session_id,
-        "timestamp": datetime.utcnow()
+        "song_id": song_id
     }
 
-    result = collection.insert_one(document)
-    print(f"Saved song response: {song_name} by {artist_name} (TBR: {tbr_average:.2f}, Action: {action})")
+    # Document to set/update
+    update_doc = {
+        "$set": {
+            "user_id": user_id,
+            "song_id": song_id,
+            "song_name": song_name,
+            "artist_name": artist_name,
+            "tbr_average": tbr_average,
+            "focus_state": focus_state,
+            "action": action,
+            "listened_duration": listened_duration,
+            "total_duration": total_duration,
+            "audio_features": audio_features or {},
+            "session_id": session_id,
+            "timestamp": datetime.utcnow()
+        }
+    }
 
-    return str(result.inserted_id)
+    # Upsert: update if exists, insert if not
+    result = collection.update_one(query, update_doc, upsert=True)
+
+    if result.upserted_id:
+        doc_id = str(result.upserted_id)
+        print(f"Inserted new song: {song_name} by {artist_name} (TBR: {tbr_average:.2f}, Action: {action})")
+    else:
+        # Find the existing document to get its ID
+        existing = collection.find_one(query)
+        doc_id = str(existing["_id"]) if existing else "unknown"
+        print(f"Updated existing song: {song_name} by {artist_name} (TBR: {tbr_average:.2f}, Action: {action})")
+
+    return doc_id
 
 
 def get_all_song_responses(user_id: str = "default_user", limit: int = 100) -> list:
@@ -187,3 +206,13 @@ def delete_all_responses(user_id: str = "default_user") -> int:
     result = collection.delete_many({"user_id": user_id})
     print(f"Deleted {result.deleted_count} responses for user {user_id}")
     return result.deleted_count
+
+
+def get_response_count(user_id: str = "default_user") -> int:
+    """Get the count of song responses with valid audio features for a user"""
+    collection = get_collection("song_responses")
+    count = collection.count_documents({
+        "user_id": user_id,
+        "audio_features": {"$ne": {}}
+    })
+    return count

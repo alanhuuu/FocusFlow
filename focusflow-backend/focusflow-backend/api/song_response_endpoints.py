@@ -12,9 +12,11 @@ from services.mongodb_service import (
     get_responses_for_training,
     test_connection,
     delete_useless_responses,
-    delete_all_responses
+    delete_all_responses,
+    get_response_count
 )
 from services.acousticbrainz_service import get_audio_features, get_musicbrainz_id, get_acousticbrainz_features
+from ml.live_training import train_and_recommend
 
 router = APIRouter(prefix="/responses", tags=["Song Responses"])
 
@@ -36,10 +38,19 @@ class SongResponseCreate(BaseModel):
     session_id: Optional[str] = None
 
 
+class RecommendationItem(BaseModel):
+    song_id: str
+    song_name: str
+    artist_name: str
+    focus_score: float
+
+
 class SongResponseOut(BaseModel):
     id: str
     message: str
     audio_features: dict
+    recommendations: Optional[list[RecommendationItem]] = None
+    song_count: int = 0
 
 
 # ============================================
@@ -107,10 +118,39 @@ async def create_song_response(data: SongResponseCreate):
             session_id=data.session_id
         )
 
+        # Check if we have enough data for ML recommendations
+        song_count = get_response_count()
+        recommendations = None
+
+        if song_count >= 3:
+            try:
+                # Train model and get recommendations
+                recs = train_and_recommend(
+                    min_entries=3,
+                    top_k=3,
+                    exclude_song_ids={data.song_id}  # Exclude current song
+                )
+                if recs:
+                    recommendations = [
+                        RecommendationItem(
+                            song_id=r["song_id"],
+                            song_name=r["song_name"],
+                            artist_name=r["artist_name"],
+                            focus_score=r["focus_score"]
+                        )
+                        for r in recs
+                    ]
+                    print(f"Generated {len(recommendations)} recommendations")
+            except Exception as e:
+                print(f"ML recommendation failed: {e}")
+                # Don't fail the whole request if ML fails
+
         return SongResponseOut(
             id=doc_id,
             message=f"Saved response for '{data.song_name}'",
-            audio_features=audio_features
+            audio_features=audio_features,
+            recommendations=recommendations,
+            song_count=song_count
         )
 
     except Exception as e:
@@ -150,7 +190,7 @@ async def get_training_data():
         responses = get_responses_for_training()
         return {
             "count": len(responses),
-            "ready_for_training": len(responses) >= 20,
+            "ready_for_training": len(responses) >= 3,  # Changed from 20 to 3 for testing
             "data": responses
         }
     except Exception as e:

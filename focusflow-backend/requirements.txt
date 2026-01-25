@@ -6,3 +6,5 @@ requests
 pylsl
 numpy
 websockets
+xgboost
+scipy

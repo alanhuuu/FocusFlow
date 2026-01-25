@@ -115,6 +115,12 @@ const ChevronDownIcon = () => (
   </svg>
 );
 
+const BrainIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+  </svg>
+);
+
 export default function Player() {
   // -------------------------
   // Timer
@@ -256,6 +262,10 @@ export default function Player() {
   const [isEegWarningClosing, setIsEegWarningClosing] = useState(false);
   const [hasAcousticBrainz, setHasAcousticBrainz] = useState(null); // null = checking, true/false = result
 
+  // AI Recommendations state
+  const [recommendedSongIds, setRecommendedSongIds] = useState(new Set());
+  const [toast, setToast] = useState(null); // { message, songs } or null
+
   // Testing mode: max song duration (set to 0 to disable)
   const MAX_SONG_DURATION = 45; // seconds
 
@@ -329,6 +339,27 @@ export default function Player() {
       if (response.ok) {
         const data = await response.json();
         console.log("Saved to MongoDB:", data.id);
+
+        // Handle ML recommendations if present
+        if (data.recommendations && data.recommendations.length > 0) {
+          console.log("Received recommendations:", data.recommendations);
+
+          // Track recommended song IDs for UI indicator
+          const newRecommendedIds = new Set(recommendedSongIds);
+          data.recommendations.forEach((rec) => {
+            newRecommendedIds.add(rec.song_id);
+          });
+          setRecommendedSongIds(newRecommendedIds);
+
+          // Show toast notification
+          setToast({
+            message: `Added ${data.recommendations.length} AI-recommended songs`,
+            songs: data.recommendations,
+          });
+
+          // Auto-hide toast after 5 seconds
+          setTimeout(() => setToast(null), 5000);
+        }
       } else {
         const errorData = await response.json();
         // Don't log as error if it's just not in AcousticBrainz
@@ -980,31 +1011,49 @@ export default function Player() {
               </div>
             ) : (
               <div className="py-2">
-                {queueItems.slice(0, 10).map((item, index) => (
-                  <div
-                    key={item.id || index}
-                    onClick={() => handleJumpToTrack(index)}
-                    className="flex items-center gap-3 px-5 py-2 hover:bg-white/10 transition cursor-pointer"
-                  >
-                    {/* Track Number */}
-                    <div className="w-5 text-white/40 text-xs text-right">{index + 1}</div>
-                    {/* Artwork */}
-                    <div className="w-10 h-10 rounded-md overflow-hidden bg-white/10 flex-shrink-0">
-                      {item.artwork ? (
-                        <img src={item.artwork} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/30">
-                          <MusicIcon />
+                {queueItems.slice(0, 10).map((item, index) => {
+                  const isAiRecommended = recommendedSongIds.has(item.id);
+                  return (
+                    <div
+                      key={item.id || index}
+                      onClick={() => handleJumpToTrack(index)}
+                      className={`flex items-center gap-3 px-5 py-2 hover:bg-white/10 transition cursor-pointer ${
+                        isAiRecommended ? "bg-[#7532ff]/10" : ""
+                      }`}
+                    >
+                      {/* Track Number */}
+                      <div className="w-5 text-white/40 text-xs text-right">{index + 1}</div>
+                      {/* Artwork */}
+                      <div className="w-10 h-10 rounded-md overflow-hidden bg-white/10 flex-shrink-0 relative">
+                        {item.artwork ? (
+                          <img src={item.artwork} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/30">
+                            <MusicIcon />
+                          </div>
+                        )}
+                        {/* AI Badge */}
+                        {isAiRecommended && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#7532ff] flex items-center justify-center shadow-lg">
+                            <BrainIcon />
+                          </div>
+                        )}
+                      </div>
+                      {/* Track Info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white text-sm truncate">{item.title}</span>
+                          {isAiRecommended && (
+                            <span className="text-[#7532ff] text-xs font-medium px-1.5 py-0.5 rounded bg-[#7532ff]/20">
+                              AI
+                            </span>
+                          )}
                         </div>
-                      )}
+                        <div className="text-white/50 text-xs truncate">{item.artist}</div>
+                      </div>
                     </div>
-                    {/* Track Info */}
-                    <div className="min-w-0 flex-1">
-                      <div className="text-white text-sm truncate">{item.title}</div>
-                      <div className="text-white/50 text-xs truncate">{item.artist}</div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1269,6 +1318,49 @@ export default function Player() {
           className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
           onClick={() => setIsSettingsOpen(false)}
         />
+      )}
+
+      {/* AI Recommendations Toast */}
+      {toast && (
+        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
+          <div
+            className="rounded-2xl border border-white/20 shadow-2xl px-6 py-4 backdrop-blur-xl"
+            style={{ backgroundColor: "rgba(47, 37, 70, 0.95)" }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-[#7532ff] flex items-center justify-center">
+                <BrainIcon />
+              </div>
+              <div>
+                <div className="text-white font-medium">{toast.message}</div>
+                <div className="text-white/50 text-xs">Based on your brain activity</div>
+              </div>
+              <button
+                onClick={() => setToast(null)}
+                className="ml-4 text-white/40 hover:text-white transition"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-2">
+              {toast.songs.map((song, idx) => (
+                <div
+                  key={song.song_id || idx}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5"
+                >
+                  <div className="text-[#7532ff] text-sm font-medium w-5">{idx + 1}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white text-sm truncate">{song.song_name}</div>
+                    <div className="text-white/50 text-xs truncate">{song.artist_name}</div>
+                  </div>
+                  <div className="text-[#7532ff] text-xs font-medium">
+                    {Math.round(song.focus_score * 100)}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
