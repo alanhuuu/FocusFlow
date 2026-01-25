@@ -3,7 +3,7 @@ EEG API Endpoints - WebSocket streaming and REST controls
 """
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from ..services.eeg_service import eeg_service
+from services.eeg_service import eeg_service
 import asyncio
 import json
 

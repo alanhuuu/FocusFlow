@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { AreaChart, Area, XAxis, YAxis, ReferenceLine, ResponsiveContainer } from "recharts";
 import { useEEG } from "../hooks/useEEG";
 import bgFocus from "../assets/bg.png";
@@ -74,6 +74,18 @@ const SkipPrevIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
     <path d="M18 4L8 12l10 8V4z" />
     <rect x="6" y="4" width="2" height="16" />
+  </svg>
+);
+
+const ChevronUpIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path fillRule="evenodd" d="M11.47 7.72a.75.75 0 0 1 1.06 0l7.5 7.5a.75.75 0 1 1-1.06 1.06L12 9.31l-6.97 6.97a.75.75 0 0 1-1.06-1.06l7.5-7.5Z" clipRule="evenodd" />
+  </svg>
+);
+
+const ChevronDownIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path fillRule="evenodd" d="M12.53 16.28a.75.75 0 0 1-1.06 0l-7.5-7.5a.75.75 0 0 1 1.06-1.06L12 14.69l6.97-6.97a.75.75 0 1 1 1.06 1.06l-7.5 7.5Z" clipRule="evenodd" />
   </svg>
 );
 
@@ -193,6 +205,85 @@ export default function Player() {
 
   const [isPlaylistPickerOpen, setIsPlaylistPickerOpen] = useState(false);
   const [isPlaylistPickerClosing, setIsPlaylistPickerClosing] = useState(false);
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [queueItems, setQueueItems] = useState([]);
+
+  // -------------------------
+  // TBR Tracking for MongoDB (Continuous)
+  // -------------------------
+  const tbrSamplesRef = useRef([]);
+  const currentTrackRef = useRef(null);
+  const trackStartTimeRef = useRef(null);
+  const isSkippingRef = useRef(false);
+
+  // Collect TBR continuously whenever EEG data updates while playing
+  useEffect(() => {
+    if (!isPlaying || !isStreaming || !currentTrackRef.current) return;
+
+    const tbr = currentData?.tbr;
+    if (tbr !== undefined && tbr !== null && !isNaN(tbr)) {
+      tbrSamplesRef.current.push(tbr);
+    }
+  }, [isPlaying, isStreaming, currentData]);
+
+  // Save song response to MongoDB
+  const saveSongResponse = useCallback(async (action) => {
+    const track = currentTrackRef.current;
+    const samples = [...tbrSamplesRef.current]; // Copy samples
+
+    if (!track) {
+      console.log("No track to save");
+      return;
+    }
+
+    // Calculate average TBR for the entire song duration
+    const tbrAverage = samples.length > 0
+      ? samples.reduce((a, b) => a + b, 0) / samples.length
+      : 0;
+
+    const listenedDuration = Math.floor((Date.now() - trackStartTimeRef.current) / 1000);
+
+    // Determine focus state based on TBR average
+    let focusState = "NEUTRAL";
+    if (tbrAverage > 0) {
+      if (tbrAverage < 2.0) focusState = "FOCUSED";
+      else if (tbrAverage > 3.5) focusState = "DISTRACTED";
+    }
+
+    const payload = {
+      song_id: track.id || "unknown",
+      song_name: track.title,
+      artist_name: track.artist,
+      tbr_average: parseFloat(tbrAverage.toFixed(3)),
+      tbr_samples: samples.map(s => parseFloat(s.toFixed(3))),
+      focus_state: focusState,
+      action: action, // "skip", "complete", or "love"
+      listened_duration: listenedDuration,
+      total_duration: Math.floor(track.duration || 0),
+    };
+
+    console.log(`Saving: ${track.title} | Action: ${action} | TBR Avg: ${tbrAverage.toFixed(2)} | Samples: ${samples.length} | Duration: ${listenedDuration}s`);
+
+    try {
+      const response = await fetch("http://localhost:8000/responses/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Saved to MongoDB:", data.id);
+      } else {
+        console.error("Failed to save:", await response.text());
+      }
+    } catch (err) {
+      console.error("Error saving:", err);
+    }
+
+    // Reset for next track
+    tbrSamplesRef.current = [];
+  }, []);
 
   // Loading timeout - prevent infinite spinner
   useEffect(() => {
@@ -240,22 +331,43 @@ export default function Player() {
     };
 
     const onTrackChange = () => {
+      // Save previous track data before updating to new track
+      if (currentTrackRef.current) {
+        const action = isSkippingRef.current ? "skip" : "complete";
+        saveSongResponse(action);
+        isSkippingRef.current = false;
+      }
+
       const item = music.nowPlayingItem;
       if (!item) {
         setTrackTitle("Not Playing");
         setTrackSubtitle("Select a playlist");
         setTrackArtwork(null);
         setDuration(0);
+        currentTrackRef.current = null;
         return;
       }
 
-      setTrackTitle(item.title || item.attributes?.name || "Unknown");
-      setTrackSubtitle(item.artistName || item.attributes?.artistName || "Unknown");
+      const title = item.title || item.attributes?.name || "Unknown";
+      const artist = item.artistName || item.attributes?.artistName || "Unknown";
+
+      setTrackTitle(title);
+      setTrackSubtitle(artist);
       setDuration(music.currentPlaybackDuration || 0);
 
       const artUrl = item.artworkURL || item.attributes?.artwork?.url;
       const art = artUrl?.replace("{w}", "200").replace("{h}", "200");
       setTrackArtwork(art || null);
+
+      // Store current track info for later saving
+      currentTrackRef.current = {
+        id: item.id,
+        title: title,
+        artist: artist,
+        duration: music.currentPlaybackDuration || 0,
+      };
+      trackStartTimeRef.current = Date.now();
+      tbrSamplesRef.current = [];
     };
 
     const onError = (error) => {
@@ -279,6 +391,37 @@ export default function Player() {
       music.removeEventListener("playbackTimeDidChange", onTimeChange);
       music.removeEventListener("playbackError", onError);
     };
+  }, [music, saveSongResponse]);
+
+  // Update queue items when queue changes
+  useEffect(() => {
+    if (!music) return;
+
+    const updateQueue = () => {
+      const items = music.queue?.items || [];
+      const currentIndex = music.queue?.position || 0;
+      // Get upcoming items (after current)
+      const upcoming = items.slice(currentIndex + 1).map((item) => ({
+        id: item.id,
+        title: item.title || item.attributes?.name || "Unknown",
+        artist: item.artistName || item.attributes?.artistName || "Unknown",
+        artwork: (item.artworkURL || item.attributes?.artwork?.url)
+          ?.replace("{w}", "80")
+          .replace("{h}", "80"),
+      }));
+      setQueueItems(upcoming);
+    };
+
+    updateQueue();
+    music.addEventListener("queueItemsDidChange", updateQueue);
+    music.addEventListener("queuePositionDidChange", updateQueue);
+    music.addEventListener("nowPlayingItemDidChange", updateQueue);
+
+    return () => {
+      music.removeEventListener("queueItemsDidChange", updateQueue);
+      music.removeEventListener("queuePositionDidChange", updateQueue);
+      music.removeEventListener("nowPlayingItemDidChange", updateQueue);
+    };
   }, [music]);
 
   async function handlePlayPause() {
@@ -301,9 +444,11 @@ export default function Player() {
   async function handleNext() {
     if (!music) return;
     try {
+      isSkippingRef.current = true; // Mark as skip before changing track
       await music.skipToNextItem();
     } catch (err) {
       console.error("Next error:", err);
+      isSkippingRef.current = false;
     }
   }
 
@@ -495,7 +640,7 @@ export default function Player() {
 
       {/* Bottom Center Player (Deky UI) */}
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
-        <div className="flex items-center gap-5 rounded-2xl px-5 py-3 border border-white/10" style={{ backgroundColor: "#2f2546" }}>
+        <div className="relative flex items-center gap-5 rounded-2xl px-5 py-3 border border-white/10" style={{ backgroundColor: "#2f2546" }}>
           {/* Album Cover */}
           <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
             {trackArtwork ? (
@@ -563,8 +708,64 @@ export default function Player() {
               <SkipNextIcon />
             </button>
           </div>
+
+          {/* Queue Toggle Button */}
+          <button
+            onClick={() => setIsQueueOpen(!isQueueOpen)}
+            className="w-8 h-8 flex items-center justify-center text-white/70 hover:text-white transition ml-2"
+            title="Show Queue"
+          >
+            {isQueueOpen ? <ChevronDownIcon /> : <ChevronUpIcon />}
+          </button>
         </div>
 
+        {/* Queue Panel - Slide Up */}
+        <div
+          className={`absolute bottom-full left-0 right-0 mb-2 rounded-2xl border border-white/10 overflow-hidden transition-all duration-300 ease-out ${
+            isQueueOpen
+              ? "opacity-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 translate-y-4 pointer-events-none"
+          }`}
+          style={{ backgroundColor: "#2f2546" }}
+        >
+          <div className="px-5 py-3 border-b border-white/10">
+            <div className="text-white/80 text-sm font-medium">Up Next</div>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {queueItems.length === 0 ? (
+              <div className="px-5 py-8 text-white/40 text-sm text-center">
+                No upcoming tracks
+              </div>
+            ) : (
+              <div className="py-2">
+                {queueItems.slice(0, 10).map((item, index) => (
+                  <div
+                    key={item.id || index}
+                    className="flex items-center gap-3 px-5 py-2 hover:bg-white/5 transition"
+                  >
+                    {/* Track Number */}
+                    <div className="w-5 text-white/40 text-xs text-right">{index + 1}</div>
+                    {/* Artwork */}
+                    <div className="w-10 h-10 rounded-md overflow-hidden bg-white/10 flex-shrink-0">
+                      {item.artwork ? (
+                        <img src={item.artwork} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/30">
+                          <MusicIcon />
+                        </div>
+                      )}
+                    </div>
+                    {/* Track Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-white text-sm truncate">{item.title}</div>
+                      <div className="text-white/50 text-xs truncate">{item.artist}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Playlist Picker Modal */}
