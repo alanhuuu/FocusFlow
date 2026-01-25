@@ -1,6 +1,7 @@
 """
 Song Response API Endpoints - Store and retrieve EEG + song data
 """
+import asyncio
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -91,8 +92,9 @@ async def create_song_response(data: SongResponseCreate):
         )
 
     try:
-        # Get audio features for this song
-        audio_features = get_audio_features(
+        # Get audio features for this song (run in thread to avoid blocking EEG WebSocket)
+        audio_features = await asyncio.to_thread(
+            get_audio_features,
             data.song_id,
             data.song_name,
             data.artist_name
@@ -127,8 +129,9 @@ async def create_song_response(data: SongResponseCreate):
 
         if song_count >= 8:
             try:
-                # Discover NEW music based on learned focus patterns
-                recs = discover_new_music(
+                # Run ML in a thread pool to avoid blocking the event loop (keeps EEG WebSocket alive)
+                recs = await asyncio.to_thread(
+                    discover_new_music,
                     min_entries=8,
                     top_k=3
                 )
