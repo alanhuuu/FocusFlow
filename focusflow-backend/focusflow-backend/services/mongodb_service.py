@@ -68,7 +68,6 @@ def save_song_response(
         "song_name": song_name,
         "artist_name": artist_name,
         "tbr_average": tbr_average,
-        "tbr_samples": tbr_samples,
         "focus_state": focus_state,
         "action": action,  # "skip", "love", "complete"
         "listened_duration": listened_duration,
@@ -168,13 +167,10 @@ def delete_useless_responses(user_id: str = "default_user") -> int:
     """Delete responses with no EEG data or very short listen time"""
     collection = get_collection("song_responses")
 
-    # Delete where: no tbr_samples, or empty tbr_samples, or listened < 10 seconds
+    # Delete where: no tbr_average, or listened < 10 seconds
     result = collection.delete_many({
         "user_id": user_id,
         "$or": [
-            {"tbr_samples": {"$exists": False}},
-            {"tbr_samples": []},
-            {"tbr_samples": {"$size": 0}},
             {"listened_duration": {"$lt": 10}},
             {"tbr_average": 0},
             {"tbr_average": {"$exists": False}}

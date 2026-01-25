@@ -142,6 +142,7 @@ export default function Player() {
   const [activeScene, setActiveScene] = useState("ambient");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showThemeLabel, setShowThemeLabel] = useState(false);
+  const [elementsVisible, setElementsVisible] = useState(true);
 
   // EEG Hook for real Muse data
   const {
@@ -193,16 +194,34 @@ export default function Player() {
 
   const handleSceneChange = (scene) => {
     if (scene === activeScene || isTransitioning) return;
+
+    // Hide theme label immediately
+    setShowThemeLabel(false);
+
+    // Step 1: Fade out UI elements AND background at the same time
+    setElementsVisible(false);
     setIsTransitioning(true);
 
+    // Step 2: Change the actual background (after fade to black)
     setTimeout(() => {
       setActiveScene(scene);
+
+      // Step 3: Fade in new background
       setTimeout(() => {
         setIsTransitioning(false);
-        setShowThemeLabel(true);
-        setTimeout(() => setShowThemeLabel(false), 4000);
+
+        // Step 4: Fade in UI elements (separate, after background)
+        setTimeout(() => {
+          setElementsVisible(true);
+
+          // Step 5: Show theme label after elements are visible
+          setTimeout(() => {
+            setShowThemeLabel(true);
+            setTimeout(() => setShowThemeLabel(false), 4000);
+          }, 500);
+        }, 250);
       }, 50);
-    }, 250);
+    }, 300);
   };
 
   function toggleFullscreen() {
@@ -234,6 +253,7 @@ export default function Player() {
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [queueItems, setQueueItems] = useState([]);
   const [showEegWarning, setShowEegWarning] = useState(false);
+  const [isEegWarningClosing, setIsEegWarningClosing] = useState(false);
   const [hasAcousticBrainz, setHasAcousticBrainz] = useState(null); // null = checking, true/false = result
 
   // Testing mode: max song duration (set to 0 to disable)
@@ -344,6 +364,17 @@ export default function Player() {
       setTimeout(() => {
         setIsPlaylistPickerOpen(false);
         setIsPlaylistPickerClosing(false);
+      }, 350);
+      return true;
+    });
+  }, []);
+
+  const closeEegWarning = useCallback(() => {
+    setIsEegWarningClosing((prev) => {
+      if (prev) return prev; // already closing
+      setTimeout(() => {
+        setShowEegWarning(false);
+        setIsEegWarningClosing(false);
       }, 350);
       return true;
     });
@@ -604,8 +635,17 @@ export default function Player() {
   // -------------------------
   // UI
   // -------------------------
+  const isAnyModalOpen = isPlaylistPickerOpen || showEegWarning || isSettingsOpen;
+
   return (
-    <div className="relative min-h-screen overflow-hidden text-white">
+    <div className="relative min-h-screen overflow-hidden text-white bg-black">
+      {/* Main content wrapper - scales down when modal is open */}
+      <div
+        className={`relative transition-all duration-300 ease-out overflow-hidden ${
+          isAnyModalOpen ? "scale-[0.96] rounded-3xl opacity-90" : "scale-100"
+        }`}
+        style={{ transformOrigin: "center center", minHeight: "100vh" }}
+      >
       {/* Background */}
       <div
         className="absolute inset-0 bg-cover bg-center"
@@ -638,7 +678,7 @@ export default function Player() {
       </div>
 
       {/* Top Right Timer */}
-      <div className="absolute top-8 right-10 z-20">
+      <div className={`absolute top-8 right-10 z-20 transition-opacity duration-700 ease-in-out ${elementsVisible ? "opacity-100" : "opacity-0"}`}>
         <div className="rounded-3xl bg-black/40 backdrop-blur-sm px-8 py-6">
           <div className="text-2xl text-white/80 font-thin text-center">Focus</div>
           <div className="text-7xl tracking-tight mt-1 text-center">{formatTime(secondsLeft)}</div>
@@ -655,7 +695,7 @@ export default function Player() {
       </div>
 
       {/* Center EEG Graph Card (NO DATA) */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 transition-opacity duration-700 ease-in-out ${elementsVisible ? "opacity-100" : "opacity-0"}`}>
         <div
           className="rounded-3xl px-8 py-6 border border-white/10 backdrop-blur-xl shadow-2xl"
           style={{ backgroundColor: "rgba(47, 37, 70, 0.75)" }}
@@ -785,19 +825,20 @@ export default function Player() {
           <MusicIcon />
         </button>
       </div>
+      </div>{/* End of main content wrapper */}
 
       {/* EEG Warning Modal */}
       {showEegWarning && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center modal-fade-in"
-          onClick={() => setShowEegWarning(false)}
+          className={`fixed inset-0 z-50 flex items-center justify-center ${isEegWarningClosing ? "modal-fade-out" : "modal-fade-in"}`}
+          onClick={closeEegWarning}
         >
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
           {/* Modal */}
           <div
-            className="relative w-[400px] rounded-3xl border border-white/10 shadow-2xl overflow-hidden modal-pop-in"
+            className={`relative w-[400px] rounded-3xl border border-white/10 shadow-2xl overflow-hidden ${isEegWarningClosing ? "modal-pop-out" : "modal-pop-in"}`}
             style={{ backgroundColor: "rgba(47, 37, 70, 0.95)" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -805,7 +846,7 @@ export default function Player() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
               <div className="text-red-400 text-lg font-medium">EEG Not Connected</div>
               <button
-                onClick={() => setShowEegWarning(false)}
+                onClick={closeEegWarning}
                 className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition"
               >
                 ✕
@@ -828,7 +869,7 @@ export default function Player() {
 
 
       {/* Bottom Center Player (Deky UI) */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
+      <div className={`absolute bottom-10 left-1/2 -translate-x-1/2 z-20 transition-opacity duration-700 ease-in-out ${elementsVisible ? "opacity-100" : "opacity-0"}`}>
         <div className="relative flex items-center gap-5 rounded-2xl px-5 py-3 border border-white/10" style={{ backgroundColor: "#2f2546" }}>
           {/* Album Cover */}
           <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
