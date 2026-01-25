@@ -1,0 +1,342 @@
+[
+  {
+    "song_id": "song_001",
+    "song_name": "Blinding Lights",
+    "artist": "The Weeknd",
+    "eeg": { "tbr_mean": 1.62, "tbr_std": 0.12 },
+    "acousticbrainz": {
+      "danceability": 0.72,
+      "energy": 0.83,
+      "valence": 0.61,
+      "tempo": 171.0,
+      "acousticness": 0.03,
+      "instrumentalness": 0.0,
+      "liveness": 0.12,
+      "speechiness": 0.05,
+      "loudness": -4.9
+    }
+  },
+  {
+    "song_id": "song_002",
+    "song_name": "Clair de Lune",
+    "artist": "Debussy",
+    "eeg": { "tbr_mean": 0.98, "tbr_std": 0.22 },
+    "acousticbrainz": {
+      "danceability": 0.15,
+      "energy": 0.21,
+      "valence": 0.18,
+      "tempo": 76.0,
+      "acousticness": 0.96,
+      "instrumentalness": 0.98,
+      "liveness": 0.11,
+      "speechiness": 0.03,
+      "loudness": -18.2
+    }
+  },
+  {
+    "song_id": "song_003",
+    "song_name": "Time",
+    "artist": "Hans Zimmer",
+    "eeg": { "tbr_mean": 1.28, "tbr_std": 0.18 },
+    "acousticbrainz": {
+      "danceability": 0.22,
+      "energy": 0.52,
+      "valence": 0.24,
+      "tempo": 95.0,
+      "acousticness": 0.74,
+      "instrumentalness": 0.91,
+      "liveness": 0.10,
+      "speechiness": 0.04,
+      "loudness": -12.4
+    }
+  },
+  {
+    "song_id": "song_004",
+    "song_name": "Numb",
+    "artist": "Linkin Park",
+    "eeg": { "tbr_mean": 1.54, "tbr_std": 0.16 },
+    "acousticbrainz": {
+      "danceability": 0.51,
+      "energy": 0.88,
+      "valence": 0.38,
+      "tempo": 110.0,
+      "acousticness": 0.02,
+      "instrumentalness": 0.0,
+      "liveness": 0.13,
+      "speechiness": 0.06,
+      "loudness": -5.2
+    }
+  },
+  {
+    "song_id": "song_005",
+    "song_name": "Weightless",
+    "artist": "Marconi Union",
+    "eeg": { "tbr_mean": 1.12, "tbr_std": 0.09 },
+    "acousticbrainz": {
+      "danceability": 0.33,
+      "energy": 0.18,
+      "valence": 0.20,
+      "tempo": 60.0,
+      "acousticness": 0.93,
+      "instrumentalness": 0.99,
+      "liveness": 0.08,
+      "speechiness": 0.03,
+      "loudness": -20.1
+    }
+  },
+  {
+    "song_id": "song_006",
+    "song_name": "Lose Yourself",
+    "artist": "Eminem",
+    "eeg": { "tbr_mean": 1.71, "tbr_std": 0.14 },
+    "acousticbrainz": {
+      "danceability": 0.78,
+      "energy": 0.76,
+      "valence": 0.50,
+      "tempo": 171.0,
+      "acousticness": 0.05,
+      "instrumentalness": 0.0,
+      "liveness": 0.16,
+      "speechiness": 0.28,
+      "loudness": -5.8
+    }
+  },
+  {
+    "song_id": "song_007",
+    "song_name": "Sea Shanty",
+    "artist": "Traditional",
+    "eeg": { "tbr_mean": 1.09, "tbr_std": 0.19 },
+    "acousticbrainz": {
+      "danceability": 0.61,
+      "energy": 0.43,
+      "valence": 0.66,
+      "tempo": 112.0,
+      "acousticness": 0.77,
+      "instrumentalness": 0.02,
+      "liveness": 0.18,
+      "speechiness": 0.09,
+      "loudness": -10.7
+    }
+  },
+  {
+    "song_id": "song_008",
+    "song_name": "Lofi Study Beats",
+    "artist": "Various",
+    "eeg": { "tbr_mean": 1.31, "tbr_std": 0.11 },
+    "acousticbrainz": {
+      "danceability": 0.64,
+      "energy": 0.36,
+      "valence": 0.42,
+      "tempo": 85.0,
+      "acousticness": 0.68,
+      "instrumentalness": 0.85,
+      "liveness": 0.09,
+      "speechiness": 0.06,
+      "loudness": -14.2
+    }
+  },
+  {
+    "song_id": "song_009",
+    "song_name": "God's Plan",
+    "artist": "Drake",
+    "eeg": { "tbr_mean": 1.47, "tbr_std": 0.17 },
+    "acousticbrainz": {
+      "danceability": 0.75,
+      "energy": 0.64,
+      "valence": 0.42,
+      "tempo": 77.0,
+      "acousticness": 0.05,
+      "instrumentalness": 0.0,
+      "liveness": 0.12,
+      "speechiness": 0.19,
+      "loudness": -6.4
+    }
+  },
+  {
+    "song_id": "song_010",
+    "song_name": "Nocturne Op.9 No.2",
+    "artist": "Chopin",
+    "eeg": { "tbr_mean": 1.03, "tbr_std": 0.24 },
+    "acousticbrainz": {
+      "danceability": 0.14,
+      "energy": 0.17,
+      "valence": 0.22,
+      "tempo": 68.0,
+      "acousticness": 0.97,
+      "instrumentalness": 0.99,
+      "liveness": 0.10,
+      "speechiness": 0.03,
+      "loudness": -19.0
+    }
+  },
+  {
+    "song_id": "song_011",
+    "song_name": "Thunderstruck",
+    "artist": "AC/DC",
+    "eeg": { "tbr_mean": 1.58, "tbr_std": 0.15 },
+    "acousticbrainz": {
+      "danceability": 0.53,
+      "energy": 0.95,
+      "valence": 0.49,
+      "tempo": 134.0,
+      "acousticness": 0.01,
+      "instrumentalness": 0.0,
+      "liveness": 0.24,
+      "speechiness": 0.05,
+      "loudness": -4.3
+    }
+  },
+  {
+    "song_id": "song_012",
+    "song_name": "Deep Focus",
+    "artist": "Ambient Works",
+    "eeg": { "tbr_mean": 1.21, "tbr_std": 0.10 },
+    "acousticbrainz": {
+      "danceability": 0.28,
+      "energy": 0.25,
+      "valence": 0.27,
+      "tempo": 72.0,
+      "acousticness": 0.88,
+      "instrumentalness": 0.96,
+      "liveness": 0.07,
+      "speechiness": 0.03,
+      "loudness": -17.3
+    }
+  },
+  {
+    "song_id": "song_013",
+    "song_name": "Bad Guy",
+    "artist": "Billie Eilish",
+    "eeg": { "tbr_mean": 1.44, "tbr_std": 0.13 },
+    "acousticbrainz": {
+      "danceability": 0.70,
+      "energy": 0.43,
+      "valence": 0.56,
+      "tempo": 135.0,
+      "acousticness": 0.33,
+      "instrumentalness": 0.0,
+      "liveness": 0.11,
+      "speechiness": 0.37,
+      "loudness": -8.1
+    }
+  },
+  {
+    "song_id": "song_014",
+    "song_name": "Stay",
+    "artist": "Kid Laroi",
+    "eeg": { "tbr_mean": 1.39, "tbr_std": 0.16 },
+    "acousticbrainz": {
+      "danceability": 0.67,
+      "energy": 0.78,
+      "valence": 0.62,
+      "tempo": 170.0,
+      "acousticness": 0.04,
+      "instrumentalness": 0.0,
+      "liveness": 0.12,
+      "speechiness": 0.06,
+      "loudness": -5.6
+    }
+  },
+  {
+    "song_id": "song_015",
+    "song_name": "Rain Sounds",
+    "artist": "Nature",
+    "eeg": { "tbr_mean": 0.91, "tbr_std": 0.08 },
+    "acousticbrainz": {
+      "danceability": 0.05,
+      "energy": 0.02,
+      "valence": 0.10,
+      "tempo": 50.0,
+      "acousticness": 1.0,
+      "instrumentalness": 1.0,
+      "liveness": 0.05,
+      "speechiness": 0.02,
+      "loudness": -30.0
+    }
+  },
+  {
+    "song_id": "song_016",
+    "song_name": "Smooth Operator",
+    "artist": "Sade",
+    "eeg": { "tbr_mean": 1.25, "tbr_std": 0.14 },
+    "acousticbrainz": {
+      "danceability": 0.79,
+      "energy": 0.48,
+      "valence": 0.55,
+      "tempo": 120.0,
+      "acousticness": 0.20,
+      "instrumentalness": 0.01,
+      "liveness": 0.14,
+      "speechiness": 0.05,
+      "loudness": -9.6
+    }
+  },
+  {
+    "song_id": "song_017",
+    "song_name": "Harder Better Faster Stronger",
+    "artist": "Daft Punk",
+    "eeg": { "tbr_mean": 1.66, "tbr_std": 0.11 },
+    "acousticbrainz": {
+      "danceability": 0.81,
+      "energy": 0.88,
+      "valence": 0.70,
+      "tempo": 123.0,
+      "acousticness": 0.02,
+      "instrumentalness": 0.04,
+      "liveness": 0.12,
+      "speechiness": 0.08,
+      "loudness": -5.1
+    }
+  },
+  {
+    "song_id": "song_018",
+    "song_name": "Moonlight Sonata",
+    "artist": "Beethoven",
+    "eeg": { "tbr_mean": 1.07, "tbr_std": 0.23 },
+    "acousticbrainz": {
+      "danceability": 0.10,
+      "energy": 0.16,
+      "valence": 0.14,
+      "tempo": 55.0,
+      "acousticness": 0.98,
+      "instrumentalness": 0.99,
+      "liveness": 0.10,
+      "speechiness": 0.02,
+      "loudness": -21.5
+    }
+  },
+  {
+    "song_id": "song_019",
+    "song_name": "Enter Sandman",
+    "artist": "Metallica",
+    "eeg": { "tbr_mean": 1.57, "tbr_std": 0.17 },
+    "acousticbrainz": {
+      "danceability": 0.56,
+      "energy": 0.92,
+      "valence": 0.37,
+      "tempo": 123.0,
+      "acousticness": 0.01,
+      "instrumentalness": 0.0,
+      "liveness": 0.14,
+      "speechiness": 0.06,
+      "loudness": -4.7
+    }
+  },
+  {
+    "song_id": "song_020",
+    "song_name": "Study Piano",
+    "artist": "Focus Lab",
+    "eeg": { "tbr_mean": 1.18, "tbr_std": 0.12 },
+    "acousticbrainz": {
+      "danceability": 0.12,
+      "energy": 0.20,
+      "valence": 0.26,
+      "tempo": 80.0,
+      "acousticness": 0.95,
+      "instrumentalness": 0.98,
+      "liveness": 0.09,
+      "speechiness": 0.03,
+      "loudness": -18.9
+    }
+  }
+]
