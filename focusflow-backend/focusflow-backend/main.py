@@ -2,13 +2,21 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 # Load .env from the same directory as this file
 env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from api import playlist_endpoints, catalog_search_endpoint, token_endpoint, eeg_endpoints, song_response_endpoints
+from api import (
+    playlist_endpoints,
+    catalog_search_endpoint,
+    token_endpoint,
+    eeg_endpoints,
+    recommendations_endpoint,
+    song_response_endpoints,
+)
 
 app = FastAPI(title="FocusFlow API")
 
@@ -21,11 +29,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Routers
 app.include_router(token_endpoint.router)
 app.include_router(playlist_endpoints.router)
 app.include_router(catalog_search_endpoint.router)
 app.include_router(eeg_endpoints.router)
 app.include_router(song_response_endpoints.router)
+app.include_router(recommendations_endpoint.router)
 
 
 @app.get("/")
