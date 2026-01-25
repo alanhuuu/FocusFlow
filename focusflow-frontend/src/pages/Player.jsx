@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { AreaChart, Area, XAxis, YAxis, ReferenceLine, ResponsiveContainer } from "recharts";
 import { useEEG } from "../hooks/useEEG";
+import { api } from "../services/api";
 import bgFocus from "../assets/bg.png";
 import bgHome from "../assets/bg-home.jpg";
 import bgChill from "../assets/bg-chill.jpg";
@@ -378,66 +379,60 @@ export default function Player() {
     console.log(`Saving: ${track.title} | Action: ${action} | TBR Avg: ${tbrAverage.toFixed(2)} | Samples: ${samples.length} | Duration: ${listenedDuration}s`);
 
     try {
-      const response = await fetch("http://localhost:8000/responses/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const response = await api.post("/responses/", payload);
+      const data = response.data;
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Saved to MongoDB:", data.id);
-        console.log("Full response data:", data);
-        console.log("Recommendations in response:", data.recommendations);
-        console.log("Song count:", data.song_count);
+      console.log("Saved to MongoDB:", data.id);
+      console.log("Full response data:", data);
+      console.log("Recommendations in response:", data.recommendations);
+      console.log("Song count:", data.song_count);
 
-        // Handle ML recommendations - NEW music discovery
-        if (data.recommendations && data.recommendations.length > 0) {
-          console.log("Discovered NEW music:", data.recommendations);
+      // Handle ML recommendations - NEW music discovery
+      if (data.recommendations && data.recommendations.length > 0) {
+        console.log("Discovered NEW music:", data.recommendations);
 
-          // Search Apple Music and add to queue
-          const addedSongs = await searchAndQueueSongs(data.recommendations);
+        // Search Apple Music and add to queue
+        const addedSongs = await searchAndQueueSongs(data.recommendations);
 
-          if (addedSongs.length > 0) {
-            // Track AI song IDs for queue indicator
-            const newAiIds = new Set(aiSongIds);
-            addedSongs.forEach(s => {
-              if (s.catalogId) newAiIds.add(s.catalogId);
-            });
-            setAiSongIds(newAiIds);
+        if (addedSongs.length > 0) {
+          // Track AI song IDs for queue indicator
+          const newAiIds = new Set(aiSongIds);
+          addedSongs.forEach(s => {
+            if (s.catalogId) newAiIds.add(s.catalogId);
+          });
+          setAiSongIds(newAiIds);
 
-            // Show toast with songs that were actually added
-            setToast({
-              message: `Added ${addedSongs.length} new songs to your queue`,
-              songs: addedSongs.map(s => ({
-                song_name: s.appleMusicName || s.song_name,
-                artist_name: s.appleMusicArtist || s.artist_name,
-                focus_score: s.focus_score,
-                artwork: s.artwork
-              })),
-            });
-          } else {
-            // Show toast but note songs couldn't be added
-            setToast({
-              message: `Found ${data.recommendations.length} songs (not on Apple Music)`,
-              songs: data.recommendations,
-            });
-          }
-
-          // Auto-hide toast after 8 seconds
-          setTimeout(() => setToast(null), 8000);
-        }
-      } else {
-        const errorData = await response.json();
-        // Don't log as error if it's just not in AcousticBrainz
-        if (errorData.detail?.includes("AcousticBrainz")) {
-          console.log("Skipped saving - not in AcousticBrainz");
+          // Show toast with songs that were actually added
+          setToast({
+            message: `Added ${addedSongs.length} new songs to your queue`,
+            songs: addedSongs.map(s => ({
+              song_name: s.appleMusicName || s.song_name,
+              artist_name: s.appleMusicArtist || s.artist_name,
+              focus_score: s.focus_score,
+              artwork: s.artwork
+            })),
+          });
         } else {
-          console.error("Failed to save:", errorData.detail);
+          // Show toast but note songs couldn't be added
+          setToast({
+            message: `Found ${data.recommendations.length} songs (not on Apple Music)`,
+            songs: data.recommendations,
+          });
         }
+
+        // Auto-hide toast after 8 seconds
+        setTimeout(() => setToast(null), 8000);
       }
     } catch (err) {
-      console.error("Error saving:", err);
+      // Axios errors have response data in err.response
+      const errorDetail = err.response?.data?.detail;
+      if (errorDetail?.includes("AcousticBrainz")) {
+        console.log("Skipped saving - not in AcousticBrainz");
+      } else if (errorDetail?.includes("TBR samples") || errorDetail?.includes("Listened only")) {
+        console.log("Skipped saving -", errorDetail);
+      } else {
+        console.error("Error saving:", errorDetail || err.message);
+      }
     }
 
     // Reset for next track
@@ -561,15 +556,10 @@ export default function Player() {
       // Check if song has AcousticBrainz data
       setHasAcousticBrainz(null); // Reset to checking state
       try {
-        const resp = await fetch(
-          `http://localhost:8000/responses/check-features?song_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`
-        );
-        if (resp.ok) {
-          const data = await resp.json();
-          setHasAcousticBrainz(data.has_acousticbrainz);
-        } else {
-          setHasAcousticBrainz(false);
-        }
+        const resp = await api.get("/responses/check-features", {
+          params: { song_name: title, artist_name: artist }
+        });
+        setHasAcousticBrainz(resp.data.has_acousticbrainz);
       } catch (err) {
         console.error("Failed to check AcousticBrainz:", err);
         setHasAcousticBrainz(false);

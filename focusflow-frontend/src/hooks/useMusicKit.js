@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { api } from "../services/api";
 
 // Unlock audio context for Chrome/Firefox autoplay policy
 async function unlockAudioContext() {
@@ -51,8 +52,8 @@ export default function useMusicKit() {
         }
 
         console.log("Fetching developer token...");
-        const res = await fetch("http://localhost:8000/token");
-        const data = await res.json();
+        const res = await api.get("/token");
+        const data = res.data;
 
         // MusicKit v3 configuration
         const instance = await window.MusicKit.configure({

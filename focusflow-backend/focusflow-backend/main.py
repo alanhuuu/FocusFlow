@@ -23,7 +23,12 @@ app = FastAPI(title="FocusFlow API")
 # CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000",
+        "http://137.220.55.138",  # Vultr hosted frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

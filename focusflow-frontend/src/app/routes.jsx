@@ -3,7 +3,8 @@ import Player from "../pages/Player";
 import Setup from "../pages/Setup";
 
 export const routes = [
-  { path: "/", element: <Home /> },
+  { path: "/", element: <Player /> },
+  { path: "/home", element: <Home /> },
   { path: "/setup", element: <Setup /> },
   { path: "/player", element: <Player /> },
 ];

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { EEG_API_URL, EEG_WS_URL } from "../services/api";
 
-const API_URL = "http://localhost:8000";
-const WS_URL = "ws://localhost:8000";
+// EEG ALWAYS connects to localhost (Muse Bluetooth is on user's machine)
+const API_URL = EEG_API_URL;
+const WS_URL = EEG_WS_URL;
 
 export function useEEG() {
   const [isConnected, setIsConnected] = useState(false);
@@ -37,7 +39,7 @@ export function useEEG() {
       }
     } catch (err) {
       console.error("[EEG] Connect error:", err);
-      setError("Failed to connect to backend");
+      setError("Failed to connect to backend. Make sure Python backend is running locally.");
       setConnectionStatus("disconnected");
       return { success: false, error: err.message };
     }
