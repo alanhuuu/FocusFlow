@@ -44,24 +44,15 @@ def load_model():
 
 
 def load_candidate_songs():
-    """
-    For hackathon speed:
-    - we mock candidate songs from a local JSON file (500 songs)
-    """
-    if not MOCK_CANDIDATES_PATH.exists():
-        raise FileNotFoundError(
-            f"❌ Mock candidates file not found at {MOCK_CANDIDATES_PATH}\n"
-            f"Create it first (500 songs with AcousticBrainz-like features)."
-        )
+    from acousticbrainz_live import get_live_candidates
 
-    with open(MOCK_CANDIDATES_PATH, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    # You can change "pop" to anything (study, lofi, rock, etc.)
+    candidates = get_live_candidates(search_query="lofi", limit=75)
 
-    if not isinstance(data, list):
-        raise ValueError("❌ Candidate songs JSON must be a LIST of songs.")
 
-    print(f"✅ Loaded {len(data)} candidate songs from: {MOCK_CANDIDATES_PATH}")
-    return data
+    print(f"✅ Loaded {len(candidates)} live candidate songs")
+    return candidates
+
 
 
 def build_feature_matrix(candidate_songs):
@@ -137,12 +128,12 @@ def recommend_top_k(model, candidate_songs, feature_cols, top_k=20):
 def main():
     model, feature_cols = load_model()
     candidate_songs = load_candidate_songs()
-    top_20 = recommend_top_k(model, candidate_songs, feature_cols=feature_cols, top_k=20)
+    top_3 = recommend_top_k(model, candidate_songs, feature_cols=feature_cols, top_k=3)
 
 
     # ✅ Print JSON output nicely
-    print("\n🎧 TOP 20 FOCUSFLOW RECOMMENDATIONS:\n")
-    print(json.dumps(top_20, indent=2))
+    print("\n🎧 TOP 3 FOCUSFLOW RECOMMENDATIONS:\n")
+    print(json.dumps(top_3, indent=2))
 
 
 if __name__ == "__main__":
