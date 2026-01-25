@@ -461,6 +461,22 @@ export default function Player() {
     }
   }
 
+  async function handleJumpToTrack(queueIndex) {
+    if (!music) return;
+    try {
+      // queueIndex is the index within queueItems (upcoming tracks)
+      // We need to add currentPosition + 1 to get the actual queue index
+      const currentPosition = music.queue?.position || 0;
+      const actualIndex = currentPosition + 1 + queueIndex;
+
+      isSkippingRef.current = true; // Mark as skip before changing track
+      await music.changeToMediaAtIndex(actualIndex);
+    } catch (err) {
+      console.error("Jump to track error:", err);
+      isSkippingRef.current = false;
+    }
+  }
+
   // -------------------------
   // UI
   // -------------------------
@@ -741,7 +757,8 @@ export default function Player() {
                 {queueItems.slice(0, 10).map((item, index) => (
                   <div
                     key={item.id || index}
-                    className="flex items-center gap-3 px-5 py-2 hover:bg-white/5 transition"
+                    onClick={() => handleJumpToTrack(index)}
+                    className="flex items-center gap-3 px-5 py-2 hover:bg-white/10 transition cursor-pointer"
                   >
                     {/* Track Number */}
                     <div className="w-5 text-white/40 text-xs text-right">{index + 1}</div>
